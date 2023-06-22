@@ -2,10 +2,11 @@
 
 A guide to my [scripts](../scripts) directory.
 
-- [deploy.sh](../scripts/deploy.sh) Deploy one CRC and three EDPM
+- [deploy.sh](../scripts/deploy.sh) Deploy one CRC and N=3 EDPM
   VMs with extra disks and network isolation.
-- [ssh.sh](../scripts/ssh.sh) Print command to SSH to the Nth EDPM VM
-- [test.sh](../scripts/test.sh) Test OpenStack by creating a VM which uses Ceph
+- [ssh_node.sh](../scripts/ssh_node.sh) Print command to SSH to the Nth EDPM VM
+- [test.sh](../scripts/test.sh) Test OpenStack by creating an image,
+  volume or VM
 - [clean.sh](../scripts/clean.sh) Remove what deploy.sh added
 
 ## Dependencies
