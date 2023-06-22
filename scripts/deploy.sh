@@ -11,14 +11,12 @@ EDPM_NODE_REPOS=0
 ADOPT=0
 EDPM_NODE_DISKS=0
 CONTROL=0
-MARIA=0
 EDPM_SVCS=0
 EDPM_DEPLOY=0
 
 # node0
 NODES=0
 NODE_START=0
-CONTROL_PODS=16
 
 if [[ ! -d ~/install_yamls ]]; then
     echo "Error: ~/install_yamls is missing"
@@ -97,30 +95,10 @@ cd ..
 
 if [ $CONTROL -eq 1 ]; then
     oc get pods -n openstack-operators | grep controller
-    echo -e "\n\nThere should be $CONTROL_PODS Running OpenStack operator pods above."
-    echo -e "(This script will wait indefinitely for all $CONTROL_PODS of them)"
-    while [[ $(oc get pods -n openstack-operators | grep controller | grep Running | wc -l) -lt $CONTROL_PODS ]];
-    do
-        echo -n .
-        sleep 1
-    done
-    # unset OPENSTACK_CTLPLANE
     # change repo or branch from explicit defaults as needed
     OPENSTACK_REPO=https://github.com/openstack-k8s-operators/openstack-operator.git \
-        OPENSTACK_BRANCH=main BMO_SETUP=false \
+        OPENSTACK_BRANCH=main BMO_SETUP=false DBSERVICE=galera \
         make openstack_deploy
-fi
-
-if [ $MARIA -eq 1 ]; then
-    oc get pods  | grep maria | grep -v controller
-    echo -e "\n\nThere should be at least one Running MariaDB pod above."
-    echo -e "(This script will wait indefinitely for it and then increase max connections)"
-    while [[ $(oc get pods | grep maria | grep -v controller | grep Running | wc -l) -lt 1 ]]; do
-        echo -n .
-        sleep 1
-    done
-    oc exec -it pod/mariadb-openstack -- mysql -uroot -p12345678 -e "set global max_connections = 4000;"
-    oc exec -it  pod/mariadb-openstack -- mysql -uroot -p12345678 -e "show variables like \"max_connections\";"
 fi
 
 if [ $EDPM_SVCS -eq 1 ]; then
