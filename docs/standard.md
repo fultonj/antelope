@@ -7,19 +7,22 @@ and DataPlane as described in:
 - [install_yamls/devsetup](https://github.com/openstack-k8s-operators/install_yamls/tree/main/devsetup)
 - [dataplane-operator/deploying](https://openstack-k8s-operators.github.io/dataplane-operator/deploying/)
 
-by using my [scripts](../scripts), [crs](../crs), and personal conventions.
+by using my [scripts](../scripts) and personal conventions.
 
 ## VMs
+
+The following VMs are deployed
 
 - crc: hosts control plane pods
 - edpm-compute-0: standard edpm compute node
 
 ## Prepare
 
-Use [deploy.sh](../scripts/deploy.sh) with:
+Use [deploy.sh](../scripts/deploy.sh)
 
-- Repeat for each boolean separately from `CRC` to `CONTROL`
-- But keep `EDPM_NODE_DISKS` at `0`
+- Set each TAG to `1` from `CRC` to `CONTROL` except keep `EDPM_NODE_DISKS` at `0`
+- You should be able to set them all to `1` at once, but try enabling
+  them one at a time the first time to make debugging easier
 - Use `NODES=0` and `NODE_START=0`
 
 You should then have a working control plane running on crc
@@ -28,6 +31,11 @@ and `edpm-compute-0` will be ready to be configured. Use
 to SSH into it.
 
 ## Create an OpenStackDataPlane CR with edpm_deploy_prep
+
+I don't use `make edpm_deploy` because I like to have a CR file to
+modify or use to undo the deployment (with `oc delete -f`). Thus,
+I use `make edpm_deploy_prep` and `kustomize` to a `dataplane.yaml`
+file.
 
 Create a `dataplane.yaml` file in your current directory.
 ```
@@ -54,8 +62,9 @@ oc logs -f dataplane-deployment-configure-network-edpm-compute-skw2g
 ### Re-run Ansible to apply configuration updates
 
 If you need to make a configuration update, edit `dataplane.yaml` and
-and run `oc apply -f dataplane.yaml`. For example, change this line:
+and run `oc apply -f dataplane.yaml`.
 
+For example, change this line:
 ```
         nova: {}
 ```
@@ -67,7 +76,7 @@ to:
             [libvirt]
             virt_type = qemu
 ```
-and then run `oc apply -f dataplane.yaml`. You should see new ansible
+and then run `oc apply -f dataplane.yaml`. You should see new Ansible
 jobs run via `oc get pods -w | grep edpm`. Then you can inspect your
 compute node to see if it got the configuration change.
 

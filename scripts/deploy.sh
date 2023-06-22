@@ -52,6 +52,8 @@ if [ $CRC_STORAGE -eq 1 ]; then
 fi
 
 if [ $DEPS -eq 1 ]; then
+    # for some reason this fails the first time but not the second
+    make input
     make input
 fi
 
