@@ -19,6 +19,7 @@ by using my [scripts](../scripts), [crs](../crs), and personal conventions.
 Use [deploy.sh](../scripts/deploy.sh) with:
 
 - Repeat for each boolean separately from `CRC` to `CONTROL`
+- But keep `EDPM_NODE_DISKS` at `0`
 - Use `NODES=0` and `NODE_START=0`
 
 You should then have a working control plane running on crc
@@ -103,7 +104,7 @@ provided by a PVC), a private network and be able to boot a VM.
 
 ## Clean
 
-Use [clean.sh](../scripts/clean.sh) with:
+Use [clean.sh](../scripts/clean.sh).
 
 - Repeat for each boolean separately from `DPJOBS` to `CRC` but
   keep `CEPH_CLI` and `CEPH_K8S` set to `0`
