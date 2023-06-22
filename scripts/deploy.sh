@@ -8,15 +8,14 @@ DEPS=0
 OPER=0
 EDPM_NODE=0
 EDPM_NODE_REPOS=0
-ADOPT=0
 EDPM_NODE_DISKS=0
-CONTROL=0
 EDPM_SVCS=0
-EDPM_DEPLOY=0
+CONTROL=0
 
 # node0
 NODES=0
 NODE_START=0
+ADOPT=0
 
 if [[ ! -d ~/install_yamls ]]; then
     echo "Error: ~/install_yamls is missing"
@@ -91,6 +90,14 @@ if [ $EDPM_NODE_DISKS -eq 1 ]; then
     popd
 fi
 
+if [ $EDPM_SVCS -eq 1 ]; then
+    pushd ~/dataplane-operator/config/services
+    for F in $(ls *.yaml); do
+	oc create -f $F
+    done
+    popd
+fi
+
 cd ..
 
 if [ $CONTROL -eq 1 ]; then
@@ -101,33 +108,3 @@ if [ $CONTROL -eq 1 ]; then
         make openstack_deploy
 fi
 
-if [ $EDPM_SVCS -eq 1 ]; then
-    pushd ~/dataplane-operator/config/services
-    for F in $(ls *.yaml); do
-	oc create -f $F
-    done
-    popd
-fi
-
-if [ $EDPM_DEPLOY -eq 1 ]; then
-    echo "Looking for pods which are not Running or Completed"
-    oc get pods --no-headers=true | egrep -v "Running|Completed" # should be 0
-    echo -e "\n\nThere should be zero pods listed above"
-    echo -e "(This script will wait indefinitely to reach 0 before EDPM_DEPLOY)"
-    while [[ $(oc get pods --no-headers=true | egrep -v "Running|Completed" |  wc -l) -ne 0 ]]; do
-        echo -n .
-        sleep 1
-    done
-    if [[ $HOSTNAME == hamfast.examle.com ]]; then
-        DATAPLANE_CHRONY_NTP_SERVER=pool.ntp.org DATAPLANE_SINGLE_NODE=false make edpm_deploy
-    else
-        DATAPLANE_CHRONY_NTP_SERVER=clock.redhat.com DATAPLANE_SINGLE_NODE=false make edpm_deploy
-    fi
-    echo -e "\n\nShould be running now. Run the following next...\n"
-    echo 'watch -n 1 "oc get pods | grep edpm"'
-    echo "./watch_ansible.sh"
-    echo "./test.sh"
-    echo -e "\n"
-fi
-
-popd
