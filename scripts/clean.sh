@@ -9,9 +9,8 @@ OPERATORS=0
 CEPH_K8S=0
 CRC=0
 
-# node0 node1 node2
-NODES=2
-WAIT=50
+# node0
+NODES=0
 NODE_START=0
 
 if [ $DPJOBS -eq 1 ]; then
@@ -52,11 +51,6 @@ fi
 if [ $OPERATORS -eq 1 ]; then
     pushd ~/install_yamls
     date
-    # echo "Waiting $WAIT seconds before deleting openstack operators"
-    # for I in $(seq 0 $WAIT); do
-    #     echo -n .
-    #     sleep 1;
-    # done
     make openstack_cleanup
     # side effect of the new approach we're trying with
     # OpenStack operator to reduce bundle size.  
