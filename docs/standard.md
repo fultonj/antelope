@@ -25,17 +25,17 @@ Use [deploy.sh](../scripts/deploy.sh)
   them one at a time the first time to make debugging easier
 - Use `NODES=0` and `NODE_START=0`
 
-You should then have a working control plane running on crc
-and `edpm-compute-0` will be ready to be configured. Use
-[ssh_node.sh](../scripts/ssh_node.sh) for a command to use
-to SSH into it.
+You should then have a working control plane running on `crc`
+and `edpm-compute-0` will be ready to be configured by Ansible.
+Use [ssh_node.sh](../scripts/ssh_node.sh) for a command to use
+to SSH into `edpm-compute-0`.
 
 ## Create an OpenStackDataPlane CR with edpm_deploy_prep
 
 I don't use `make edpm_deploy` because I like to have a CR file to
 modify or use to undo the deployment (with `oc delete -f`). Thus,
-I use `make edpm_deploy_prep` and `kustomize` to a `dataplane.yaml`
-file.
+I use `make edpm_deploy_prep` and `kustomize` to create a
+`dataplane.yaml` file.
 
 Create a `dataplane.yaml` file in your current directory.
 ```
