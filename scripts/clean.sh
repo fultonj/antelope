@@ -1,8 +1,6 @@
 #!/bin/bash
 
-DPJOBS=0
 EDPM=0
-DATAPLANE_CR=0
 CONTROL=0
 CEPH_CLI=0
 OPERATORS=0
@@ -13,24 +11,12 @@ CRC=0
 NODES=1
 NODE_START=0
 
-if [ $DPJOBS -eq 1 ]; then
-    eval $(crc oc-env)
-    oc login -u kubeadmin -p 12345678 https://api.crc.testing:6443
-    oc get pods -o name | grep dataplane | grep -v manager | xargs oc delete
-    oc get pods -o name | grep nova-edpm  | xargs oc delete
-    oc get openstackansibleees.ansibleee.openstack.org -o name | xargs oc delete
-fi
-
 if [ $EDPM -eq 1 ]; then
     pushd ~/install_yamls/devsetup
     for I in $(seq $NODE_START $NODES); do
         make edpm_compute_cleanup EDPM_COMPUTE_SUFFIX=$I;
     done
     popd
-fi
-
-if [ $DATAPLANE_CR -eq 1 ]; then
-    bash data_plane_cr.sh DELETE
 fi
 
 if [ $CONTROL -eq 1 ]; then
@@ -52,9 +38,6 @@ if [ $OPERATORS -eq 1 ]; then
     pushd ~/install_yamls
     date
     make openstack_cleanup
-    # side effect of the new approach we're trying with
-    # OpenStack operator to reduce bundle size.  
-    make manila_cleanup
     popd
 fi
 
