@@ -102,7 +102,7 @@ if [ $CONTROL -eq 1 ]; then
     oc get pods -n openstack-operators | grep controller
     # change repo or branch from explicit defaults as needed
     OPENSTACK_REPO=https://github.com/openstack-k8s-operators/openstack-operator.git \
-        OPENSTACK_BRANCH=main BMO_SETUP=false DBSERVICE=galera \
+        OPENSTACK_BRANCH=main DBSERVICE=galera \
         make openstack_deploy
 fi
 
