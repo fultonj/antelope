@@ -1,0 +1,5 @@
+127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
+192.168.122.100 edpm-compute-0
+192.168.122.101 edpm-compute-1
+192.168.122.102 edpm-compute-2

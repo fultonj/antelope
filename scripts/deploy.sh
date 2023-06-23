@@ -81,7 +81,7 @@ if [ $EDPM_NODE_REPOS -eq 1 ]; then
 fi
 
 if [ $EDPM_NODE_DISKS -eq 1 ]; then
-    pushd ~/antelope/scripts/
+    pushd ~/antelope/scripts/ceph/
     for I in $(seq $NODE_START $NODES); do
         bash edpm-compute-disk.sh $I
     done
