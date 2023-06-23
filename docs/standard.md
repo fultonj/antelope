@@ -113,8 +113,14 @@ provided by a PVC), a private network and be able to boot a VM.
 
 ## Clean
 
+Delete the `OpenStackDataPlane` CR.
+```
+oc delete -f dataplane.yaml
+```
+
 Use [clean.sh](../scripts/clean.sh).
 
-- Repeat for each boolean separately from `DPJOBS` to `CRC` but
-  keep `CEPH_CLI` and `CEPH_K8S` set to `0`
-- Use `NODES=0` and `NODE_START=0`
+- Set `EDPM` and `CONTROL` to `1` but keep `CEPH_CLI` and `CEPH_K8S` set to `0`
+- Set `NODES` and `NODE_START` to `0`
+- Set `OPERATORS` and/or `CRC to `1` to remove everything, or leave
+  them at `0` if you wish to deploy again without changing the operators.
