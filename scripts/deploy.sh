@@ -12,8 +12,8 @@ EDPM_NODE_DISKS=0
 EDPM_SVCS=0
 CONTROL=0
 
-# node0
-NODES=0
+# node0 node1
+NODES=1
 NODE_START=0
 ADOPT=0
 
@@ -75,18 +75,14 @@ if [ $EDPM_NODE -eq 1 ]; then
 fi
 
 if [ $EDPM_NODE_REPOS -eq 1 ]; then
-    START=0
-    if [ $ADOPT -eq 1 ]; then
-        START=1
-    fi
-    for I in $(seq $START $NODES); do
+    for I in $(seq $NODE_START $NODES); do
         make edpm_compute_repos EDPM_COMPUTE_SUFFIX=$I;
     done
 fi
 
 if [ $EDPM_NODE_DISKS -eq 1 ]; then
-    pushd ~/zed/ng/ceph/
-    for I in $(seq 0 $NODES); do
+    pushd ~/antelope/scripts/
+    for I in $(seq $NODE_START $NODES); do
         bash edpm-compute-disk.sh $I
     done
     popd

@@ -9,8 +9,8 @@ OPERATORS=0
 CEPH_K8S=0
 CRC=0
 
-# node0
-NODES=0
+# node0 node1
+NODES=1
 NODE_START=0
 
 if [ $DPJOBS -eq 1 ]; then
