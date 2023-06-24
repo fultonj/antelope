@@ -86,18 +86,37 @@ Deploy the control plane.
 oc create -f control.yaml
 ```
 
-
 ## Deploy an OpenStackDataPlane
 
 Use `make edpm_deploy_prep` to create a base `dataplane.yaml` file for
 the data plane.
 
 ```
-TARGET=$PWD/data_plane.yaml
+TARGET=$HOME/antelope/crs/data_plane/base/deployment.yaml
 pushd ~/install_yamls
 DATAPLANE_CHRONY_NTP_SERVER=pool.ntp.org \
-    DATAPLANE_SINGLE_NODE=true \
+    DATAPLANE_SINGLE_NODE=false DATAPLANE_TOTAL_NODES=2 \
     make edpm_deploy_prep
 kustomize build out/openstack/dataplane/cr > $TARGET
 popd
+```
+Create a data.yaml file with customizations for Ceph.
+```
+pushd ~/antelope/crs/
+kustomize build data_plane/overlay/ceph > data.yaml
+```
+The
+[deployment.yaml in the ceph overlay](../crs/data_plane/overlay/ceph/deployment.yaml)
+contains `extraMounts` and `customServiceConfig` for Nova to run Ceph which are applied via
+[patchesStrategicMerge](https://kubectl.docs.kubernetes.io/references/kustomize/builtins/#_patchesstrategicmerge_).
+
+Set the actual FSID.
+```
+FSID=$(oc get secret ceph-conf-files -o json | jq -r '.data."ceph.conf"' \
+  | base64 -d | grep fsid | sed -e 's/fsid = //' | xargs)
+sed -i "s/_FSID_/${FSID}/" data.yaml
+```
+Deploy the data plane.
+```
+oc create -f data.yaml
 ```

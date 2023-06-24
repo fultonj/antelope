@@ -32,6 +32,14 @@ cd ~/antelope/crs/
 kustomize build control_plane/overlay/ceph
 ```
 
+## data_plane
+
+[data_plane](data_plane) assumes a file like `deployment.yaml` in in
+the base directory and does similar substitutions with it like
+control_plane.
+
+## hello_world
+
 See
 [kustomize helloWorld](https://github.com/kubernetes-sigs/kustomize/tree/master/examples/helloWorld)
-for information on how they work.
+for a a kustomize example.
