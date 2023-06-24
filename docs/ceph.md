@@ -77,7 +77,8 @@ to run Ceph which are applied via
 
 Set the actual FSID.
 ```
-FSID=$(oc get secret ceph-conf-files -o json | jq -r '.data."ceph.conf"' | base64 -d | grep fsid | sed -e 's/fsid = //' | xargs)
+FSID=$(oc get secret ceph-conf-files -o json | jq -r '.data."ceph.conf"' \
+  | base64 -d | grep fsid | sed -e 's/fsid = //' | xargs)
 sed -i "s/_FSID_/${FSID}/" control.yaml
 ```
 Deploy the control plane.
