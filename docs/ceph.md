@@ -51,3 +51,52 @@ Run [ceph_secret.sh](../scripts/ceph/ceph_secret.sh) to create a secret viewable
 Ceph should now be running on edpm-compute-0 and the `ceph-conf-files`
 secret can be used to access it.
 
+## Deploy an OpenStackControlPlane
+
+Use `make openstack_deploy_prep` to create a base `deployment.yaml`
+file for the control plane.
+
+```
+TARGET=$HOME/antelope/crs/control_plane/base/deployment.yaml
+pushd ~/install_yamls
+DBSERVICE=galera make openstack_deploy_prep
+kustomize build out/openstack/openstack/cr > $TARGET
+popd
+```
+
+Create a control.yaml file with customizations for Ceph.
+```
+pushd ~/antelope/crs/
+kustomize build control_plane/overlay/ceph/ > control.yaml
+```
+The
+[deployment.yaml in the ceph overlay](../crs/control_plane/overlay/ceph/deployment.yaml)
+contains `extraMounts` and `customServiceConfig` for Glance and Cinder
+to run Ceph which are applied via
+[patchesStrategicMerge](https://kubectl.docs.kubernetes.io/references/kustomize/builtins/#_patchesstrategicmerge_).
+
+Set the actual FSID.
+```
+FSID=$(oc get secret ceph-conf-files -o json | jq -r '.data."ceph.conf"' | base64 -d | grep fsid | sed -e 's/fsid = //' | xargs)
+sed -i "s/_FSID_/${FSID}/" control.yaml
+```
+Deploy the control plane.
+```
+oc create -f control.yaml
+```
+
+
+## Deploy an OpenStackDataPlane
+
+Use `make edpm_deploy_prep` to create a base `dataplane.yaml` file for
+the data plane.
+
+```
+TARGET=$PWD/data_plane.yaml
+pushd ~/install_yamls
+DATAPLANE_CHRONY_NTP_SERVER=pool.ntp.org \
+    DATAPLANE_SINGLE_NODE=true \
+    make edpm_deploy_prep
+kustomize build out/openstack/dataplane/cr > $TARGET
+popd
+```
