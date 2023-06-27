@@ -9,6 +9,7 @@ A guide to my scripts directory.
   volume or VM
 - [clean.sh](clean.sh) Remove what deploy.sh added
 - [ceph](ceph) Directory of scripts related to Ceph
+- [latest.sh](latest.sh) See Dependencies
 
 ## Dependencies
 
@@ -19,6 +20,5 @@ repositories in your home directory.
 - https://github.com/openstack-k8s-operators/dataplane-operator
 
 I personally check out my own forks of the above projects and use them
-in my home directory so that I can test my own patches.
-
-
+in my home directory so that I can test my own patches. I use 
+[latest.sh](latest.sh) to sync them with the latest versions.
