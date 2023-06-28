@@ -120,3 +120,21 @@ Deploy the data plane.
 ```
 oc create -f data.yaml
 ```
+
+## Watch Ansible
+
+```
+oc get pods -w | grep edpm
+oc logs -f dataplane-deployment-configure-network-edpm-compute-skw2g
+```
+
+## Test
+
+Use [test.sh](../scripts/test.sh) with:
+
+- `CEPH` set to 1
+
+You should be able to create a glance image hosted on ceph and see it
+in the images pool. You should then be able to create private network
+and be able to boot a VM. You should also be able to attach a volume
+to it.
