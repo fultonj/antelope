@@ -130,11 +130,45 @@ oc logs -f dataplane-deployment-configure-network-edpm-compute-skw2g
 
 ## Test
 
-Use [test.sh](../scripts/test.sh) with:
+Use [test.sh](../scripts/test.sh)
 
-- `CEPH` set to 1
+- Set `CEPH` to `1`
+- Adjust other variables as needed
 
 You should be able to create a glance image hosted on ceph and see it
 in the images pool. You should then be able to create private network
 and be able to boot a VM. You should also be able to attach a volume
 to it.
+
+## Clean Ups
+
+### Redeploy edpm-compute-0
+
+If you only want to redeploy the EDPM node without touching the
+control plane or the ceph node on edpm-compute-0, then delete
+the CR from "Deploy an OpenStackDataPlane".
+
+```
+oc delete -f data.yaml
+```
+Use [clean.sh](../scripts/clean.sh) but
+
+- Set `EDPM`, `NODES` and `NODE_START` to `1`
+- Leave all other variables set to `0`
+
+Use [deploy.sh](../scripts/deploy.sh)
+
+- Set `NODES`, `NODE_START`, `EDPM_NODE` and `EDPM_NODE_REPOS` to `1`
+- Leave all other variables set to `0`
+
+The above should create a new edpm-compute-1 system. Then follow the
+steps from "Deploy an OpenStackDataPlane".
+
+### Clean Restart
+
+Use [clean.sh](../scripts/clean.sh).
+
+- Set `EDPM`, `CONTROL`, `NODES` and `CEPH_CLI` to `1`
+- Keep `NODE_START` and `CEPH_K8S` set to `0`
+- Set `OPERATORS` and/or `CRC to `1` to remove everything, or leave
+  them at `0` if you wish to deploy again without changing the operators.
