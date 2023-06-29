@@ -166,9 +166,14 @@ steps from "Deploy an OpenStackDataPlane".
 
 ### Clean Restart
 
+```
+oc delete -f data.yaml
+oc delete -f control.yaml
+```
+
 Use [clean.sh](../scripts/clean.sh).
 
-- Set `EDPM`, `CONTROL`, `NODES` and `CEPH_CLI` to `1`
+- Set `EDPM`, `NODES` and `CEPH_CLI` to `1`
 - Keep `NODE_START` and `CEPH_K8S` set to `0`
 - Set `OPERATORS` and/or `CRC` to `1` to remove everything, or leave
   them at `0` if you wish to deploy again without changing the operators.
