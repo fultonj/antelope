@@ -142,7 +142,7 @@ to it.
 
 ## Clean Ups
 
-### Redeploy edpm-compute-0
+### Redeploy edpm-compute-1
 
 If you only want to redeploy the EDPM node without touching the
 control plane or the ceph node on edpm-compute-0, then delete
