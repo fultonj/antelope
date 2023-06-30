@@ -15,6 +15,8 @@ The following VMs are deployed
 
 - crc: hosts control plane pods
 - edpm-compute-0: standard edpm compute node
+- edpm-compute-1: standard edpm compute node
+- edpm-compute-2: standard edpm compute node
 
 ## Prepare
 
@@ -23,10 +25,10 @@ Use [deploy.sh](../scripts/deploy.sh)
 - Set each TAG to `1` from `CRC` to `CONTROL` except keep `EDPM_NODE_DISKS` at `0`
 - You should be able to set them all to `1` at once, but try enabling
   them one at a time the first time to make debugging easier
-- Use `NODES=0` and `NODE_START=0`
+- Use `NODES=2` and `NODE_START=0`
 
 You should then have a working control plane running on `crc`
-and `edpm-compute-0` will be ready to be configured by Ansible.
+and `edpm-compute-{0,1,2}` will be ready to be configured by Ansible.
 Use [ssh_node.sh](../scripts/ssh_node.sh) for a command to use
 to SSH into `edpm-compute-0`.
 
@@ -42,12 +44,19 @@ Create a `dataplane.yaml` file in your current directory.
 TARGET=$PWD/dataplane.yaml
 pushd ~/install_yamls
 DATAPLANE_CHRONY_NTP_SERVER=pool.ntp.org \
-    DATAPLANE_SINGLE_NODE=true \
+    DATAPLANE_TOTAL_NODES=3 \
+    DATAPLANE_SINGLE_NODE=false \
     make edpm_deploy_prep
 oc kustomize out/openstack/dataplane/cr > $TARGET
 popd
 ```
 Edit this file if necessary.
+
+For example, set the `spec.deployStrategy.deploy` field to `True` as
+[documented](https://openstack-k8s-operators.github.io/dataplane-operator/deploying/#deploy-the-dataplane)
+so that the
+[dataplane-operator provided services](https://openstack-k8s-operators.github.io/dataplane-operator/composable_services)
+will be configured (by Ansible) on the EDPM nodes.
 
 ## Run EDPM Ansible
 ```
@@ -85,7 +94,7 @@ $(./ssh_node.sh)
 podman exec -ti nova_compute /bin/bash
 cat /etc/nova/nova.conf.d/02-nova-override.conf
 ```
-I personally use `virt_type = qemu` on my hypervisor for test VMs.
+I use `virt_type = qemu` so that my EDPM VMs can host nested VMs for testing.
 
 ### Stop Failing Ansible Jobs
 
@@ -121,6 +130,6 @@ oc delete -f dataplane.yaml
 Use [clean.sh](../scripts/clean.sh).
 
 - Set `EDPM` and `CONTROL` to `1` but keep `CEPH_CLI` and `CEPH_K8S` set to `0`
-- Set `NODES` and `NODE_START` to `0`
+- Set `NODES` to `2` and `NODE_START` to `0`
 - Set `OPERATORS` and/or `CRC to `1` to remove everything, or leave
   them at `0` if you wish to deploy again without changing the operators.

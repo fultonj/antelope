@@ -12,9 +12,9 @@ EDPM_NODE_DISKS=0
 EDPM_SVCS=0
 CONTROL=0
 
-# node0 node1
-NODES=1
-NODE_START=0
+# node0 node1 node2
+NODES=2
+NODE_START=1
 ADOPT=0
 
 if [[ ! -d ~/install_yamls ]]; then
