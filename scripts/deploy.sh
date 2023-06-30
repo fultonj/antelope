@@ -3,7 +3,7 @@
 #TAGS
 CRC=0
 ATTACH=0
-CRC_STORAGE=0
+PVC=0
 DEPS=0
 OPER=0
 EDPM_NODE=0
@@ -14,7 +14,7 @@ CONTROL=0
 
 # node0 node1 node2
 NODES=2
-NODE_START=1
+NODE_START=0
 ADOPT=0
 
 if [[ ! -d ~/install_yamls ]]; then
@@ -47,7 +47,7 @@ fi
 
 cd ..
 
-if [ $CRC_STORAGE -eq 1 ]; then
+if [ $PVC -eq 1 ]; then
     make crc_storage
 fi
 
