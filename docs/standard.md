@@ -129,7 +129,24 @@ oc delete -f dataplane.yaml
 
 Use [clean.sh](../scripts/clean.sh).
 
-- Set `EDPM` and `CONTROL` to `1` but keep `CEPH_CLI` and `CEPH_K8S` set to `0`
+- Set `EDPM`, `CONTROL`, and `PVC` to `1`
 - Set `NODES` to `2` and `NODE_START` to `0`
-- Set `OPERATORS` and/or `CRC to `1` to remove everything, or leave
-  them at `0` if you wish to deploy again without changing the operators.
+- Keep `CEPH_CLI` and `CEPH_K8S` set to `0`
+
+### Deploy Again
+
+To deploy again without having to redploy and configure CRC,
+use [deploy.sh](../scripts/deploy.sh).
+
+- Set `PVC`, `DEPS` and `CONTROL` to `1` to deploy a new control plane
+- Set `EDPM_NODE` and `EDPM_NODE_REPOS` to `1` to prepare edpm nodes
+- Use `NODES=2` and `NODE_START=0`
+
+You should now be able to start again from "Create an
+OpenStackDataPlane CR with edpm_deploy_prep"
+
+### Clean Everything
+
+Use [clean.sh](../scripts/clean.sh).
+
+- Set `OPERATORS` and `CRC` to `1` to remove everything
