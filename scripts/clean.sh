@@ -5,6 +5,7 @@ CONTROL=0
 CEPH_CLI=0
 OPERATORS=0
 CEPH_K8S=0
+PVC=0
 CRC=0
 
 # node0 node1 node2
@@ -47,9 +48,14 @@ if [ $CEPH_K8S -eq 1 ]; then
     popd
 fi
 
-if [ $CRC -eq 1 ]; then
+if [ $PVC -eq 1 ]; then
     pushd ~/install_yamls
-    #make crc_storage_cleanup
+    make crc_storage_cleanup
+    popd
+fi
+
+if [ $CRC -eq 1 ]; then
+    pushd ~/install_yamls/devsetup
     cd devsetup
     make crc_cleanup
     popd
