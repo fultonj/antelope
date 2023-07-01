@@ -20,12 +20,23 @@ The following VMs are deployed
 
 ## Prepare
 
-Use [deploy.sh](../scripts/deploy.sh)
+Use [deploy.sh](../scripts/deploy.sh) sequentially with the following
+tags set to `1` (unless otherwise indicated other tags are `0`).
 
-- Set each TAG to `1` from `CRC` to `CONTROL` except keep `EDPM_NODE_DISKS` at `0`
-- You should be able to set them all to `1` at once, but try enabling
-  them one at a time the first time to make debugging easier
-- Use `NODES=2` and `NODE_START=0`
+- `CRC`
+- `ATTACH`
+- `PVC` and `DEPS`
+- `OPER`
+
+Set `CONTROL` to `1` and while the control plane is still coming up
+build the EDPM nodes sequentially with the following tags set to `1`.
+
+- `EDPM_NODE`
+- `EDPM_NODE_REPOS`
+
+Keep `NODES=2`, `EDPM_NODE_DISKS=0`, `NODE_START=0` through the entire
+process. When `oc get pods` shows that `nova-api` and `dnsmasq-dns`
+are running the contorl plane should be ready.
 
 You should then have a working control plane running on `crc`
 and `edpm-compute-{0,1,2}` will be ready to be configured by Ansible.
@@ -139,8 +150,16 @@ To deploy again without having to redploy and configure CRC,
 use [deploy.sh](../scripts/deploy.sh).
 
 - Set `PVC`, `DEPS` and `CONTROL` to `1` to deploy a new control plane
-- Set `EDPM_NODE` and `EDPM_NODE_REPOS` to `1` to prepare edpm nodes
-- Use `NODES=2` and `NODE_START=0`
+
+while the control plane is still coming up build the EDPM nodes
+sequentially with the following tags set to `1`.
+
+- `EDPM_NODE`
+- `EDPM_NODE_REPOS`
+
+Keep `NODES=2`, `EDPM_NODE_DISKS=0`, `NODE_START=0` through the entire
+process. When `oc get pods` shows that `nova-api` and `dnsmasq-dns`
+are running the contorl plane should be ready.
 
 You should now be able to start again from "Create an
 OpenStackDataPlane CR with edpm_deploy_prep"
