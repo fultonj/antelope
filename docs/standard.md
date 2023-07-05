@@ -46,9 +46,8 @@ to SSH into `edpm-compute-0`.
 ## Create an OpenStackDataPlane CR with edpm_deploy_prep
 
 I don't use `make edpm_deploy` because I like to have a CR file to
-modify or use to undo the deployment (with `oc delete -f`). Thus,
-I use `make edpm_deploy_prep` and `kustomize` to create a
-`deployment.yaml` file.
+review and modify before I start the deployment. Thus, I use `make
+edpm_deploy_prep` and `kustomize` to create a `deployment.yaml` file.
 
 Create a `deployment.yaml` file in the base data_plane CR directory.
 ```
@@ -171,6 +170,12 @@ Delete the `OpenStackDataPlane` CR.
 ```
 oc delete -f data_plane.yaml
 ```
+Another way to do this if you don't have the CR file is.
+```
+oc delete openstackdataplane.dataplane.openstack.org/standard-openstack-edpm
+```
+Use `oc edit openstackdataplane.dataplane.openstack.org` to determine
+the name if `standard-openstack-edpm` does not match.
 
 Use [clean.sh](../scripts/clean.sh).
 
