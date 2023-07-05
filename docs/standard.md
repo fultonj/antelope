@@ -181,7 +181,7 @@ the name if `standard-openstack-edpm` does not match.
 
 Use [clean.sh](../scripts/clean.sh).
 
-- Set `EDPM`, `CONTROL`, and `PVC` to `1`
+- Set `EDPM_NODE`, `CONTROL`, and `PVC` to `1`
 
 The script only needs to be run once with all of the above.
 Other vars can keep their defualts of 0 (though NODES defaults to 2).

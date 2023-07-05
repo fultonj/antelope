@@ -1,6 +1,7 @@
 #!/bin/bash
 
-EDPM=1
+EDPM_CR=1
+EDPM_NODE=1
 CONTROL=1
 CEPH_CLI=0
 OPERATORS=0
@@ -12,7 +13,14 @@ CRC=0
 NODES=2
 NODE_START=0
 
-if [ $EDPM -eq 1 ]; then
+eval $(crc oc-env)
+oc login -u kubeadmin -p 12345678 https://api.crc.testing:6443
+
+if [ $EDPM_CR -eq 1 ]; then
+    oc get openstackdataplane.dataplane.openstack.org -o name | xargs oc delete
+fi
+
+if [ $EDPM_NODE -eq 1 ]; then
     pushd ~/install_yamls/devsetup
     for I in $(seq $NODE_START $NODES); do
         make edpm_compute_cleanup EDPM_COMPUTE_SUFFIX=$I;
@@ -28,8 +36,6 @@ if [ $CONTROL -eq 1 ]; then
 fi
 
 if [ $CEPH_CLI -eq 1 ]; then
-    eval $(crc oc-env)
-    oc login -u kubeadmin -p 12345678 https://api.crc.testing:6443
     oc get secret | grep ceph
     oc delete secret ceph-conf-files
     oc get secret | grep ceph
