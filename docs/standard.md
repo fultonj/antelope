@@ -34,9 +34,8 @@ build the EDPM nodes sequentially with the following tags set to `1`.
 - `EDPM_NODE`
 - `EDPM_NODE_REPOS`
 
-Keep `NODES=2`, `EDPM_NODE_DISKS=0`, `NODE_START=0` through the entire
-process. When `oc get pods` shows that `nova-api` and `dnsmasq-dns`
-are running the contorl plane should be ready.
+When `oc get pods` shows that `nova-api` and `dnsmasq-dns` are running
+the contorl plane should be ready.
 
 You should then have a working control plane running on `crc`
 and `edpm-compute-{0,1,2}` will be ready to be configured by Ansible.
@@ -200,9 +199,8 @@ sequentially with the following tags set to `1`.
 - `EDPM_NODE`
 - `EDPM_NODE_REPOS`
 
-Keep `NODES=2`, `EDPM_NODE_DISKS=0`, `NODE_START=0` through the entire
-process. When `oc get pods` shows that `nova-api` and `dnsmasq-dns`
-are running the contorl plane should be ready.
+When `oc get pods` shows that `nova-api` and `dnsmasq-dns` are running
+the contorl plane should be ready.
 
 You should now be able to start again from "Create an
 OpenStackDataPlane CR with edpm_deploy_prep"
