@@ -32,3 +32,7 @@ done
 export EDPM_NODE_REPOS=1
 bash deploy.sh
 unset EDPM_NODE_REPOS
+
+## TODO
+# 1. wait and run EDPM_DEPLOY_PREP
+# 2. confirm control plane is ready
