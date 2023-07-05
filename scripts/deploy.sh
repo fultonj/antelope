@@ -11,6 +11,8 @@ EDPM_NODE=0
 EDPM_NODE_REPOS=0
 EDPM_NODE_DISKS=0
 EDPM_SVCS=0
+EDPM_DEPLOY_PREP=0
+EDPM_DEPLOY_STANDARD=0
 
 # node0 node1 node2
 NODES=2
@@ -88,6 +90,8 @@ if [ $EDPM_NODE_REPOS -eq 1 ]; then
     done
 fi
 
+popd # out of install_yamls
+
 if [ $EDPM_NODE_DISKS -eq 1 ]; then
     pushd ~/antelope/scripts/ceph/
     for I in $(seq $NODE_START $NODES); do
@@ -104,4 +108,21 @@ if [ $EDPM_SVCS -eq 1 ]; then
     popd
 fi
 
-popd
+if [ $EDPM_DEPLOY_PREP -eq 1 ]; then
+    TARGET=$HOME/antelope/crs/data_plane/base/deployment.yaml
+    pushd ~/install_yamls
+    DATAPLANE_CHRONY_NTP_SERVER=pool.ntp.org \
+        DATAPLANE_TOTAL_NODES=3 \
+        DATAPLANE_SINGLE_NODE=false \
+        make edpm_deploy_prep
+    oc kustomize out/openstack/dataplane/cr > $TARGET
+    popd
+    ls -l $TARGET
+fi
+
+if [ $EDPM_DEPLOY_STANDARD -eq 1 ]; then
+    pushd ~/antelope/crs/
+    kustomize build data_plane/overlay/standard > data_plane.yaml
+    oc create -f data_plane.yaml
+    popd
+fi

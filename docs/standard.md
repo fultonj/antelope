@@ -60,6 +60,9 @@ DATAPLANE_CHRONY_NTP_SERVER=pool.ntp.org \
 oc kustomize out/openstack/dataplane/cr > $TARGET
 popd
 ```
+
+[deploy.sh](../scripts/deploy.sh) does this when EDPM_DEPLOY_PREP is used.
+
 ### Customize the OpenStackDataPlane CR Automatically
 
 The section below this one describes changes I like to make to my
