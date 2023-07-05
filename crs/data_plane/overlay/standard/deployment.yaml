@@ -1,0 +1,37 @@
+apiVersion: dataplane.openstack.org/v1beta1
+kind: OpenStackDataPlane
+metadata:
+  name: openstack-edpm
+  namespace: openstack
+spec:
+  roles:
+    edpm-compute:
+      nodeTemplate:
+        nova:
+          customServiceConfig: |
+            [libvirt]
+            virt_type = qemu
+      # remove repo-setup from services list
+      services:
+        - configure-network
+        - validate-network
+        - install-os
+        - configure-os
+        - run-os
+      # deploy all nodes (role level)
+      deployStrategy:
+        deploy: true
+  # deploy all nodes (node level)
+  nodes:
+    edpm-compute-0:
+      deployStrategy:
+        deploy: true
+    edpm-compute-1:
+      deployStrategy:
+        deploy: true
+    edpm-compute-2:
+      deployStrategy:
+        deploy: true
+  # deploy all nodes (spec level)
+  deployStrategy:
+    deploy: true
