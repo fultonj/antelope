@@ -1,11 +1,11 @@
 #!/bin/bash
 
-EDPM=0
-CONTROL=0
+EDPM=1
+CONTROL=1
 CEPH_CLI=0
 OPERATORS=0
 CEPH_K8S=0
-PVC=0
+PVC=1
 CRC=0
 
 # node0 node1 node2

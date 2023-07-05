@@ -180,8 +180,9 @@ the name if `standard-openstack-edpm` does not match.
 Use [clean.sh](../scripts/clean.sh).
 
 - Set `EDPM`, `CONTROL`, and `PVC` to `1`
-- Set `NODES` to `2` and `NODE_START` to `0`
-- Keep `CEPH_CLI` and `CEPH_K8S` set to `0`
+
+The script only needs to be run once with all of the above.
+Other vars can keep their defualts of 0 (though NODES defaults to 2).
 
 ### Deploy Again
 
