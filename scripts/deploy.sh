@@ -1,18 +1,19 @@
 #!/bin/bash
 
 #TAGS
-CRC=0
-ATTACH=0
-PVC=0
-DEPS=0
-OPER=0
-CONTROL=0
-EDPM_NODE=0
-EDPM_NODE_REPOS=0
-EDPM_NODE_DISKS=0
-EDPM_SVCS=0
-EDPM_DEPLOY_PREP=0
-EDPM_DEPLOY_STANDARD=0
+CRC=${CRC:-"0"}
+ATTACH=${ATTACH:-"0"}
+PVC=${PVC:-"0"}
+DEPS=${DEPS:-"0"}
+OPER=${OPER:-"0"}
+CONTROL=${CONTROL:-"0"}
+EDPM_NODE=${EDPM_NODE:-"0"}
+EDPM_NODE=${EDPM_NODE:-"0"}
+EDPM_NODE_REPOS=${EDPM_NODE_REPOS:-"0"}
+EDPM_NODE_DISKS=${EDPM_NODE_DISKS:-"0"}
+EDPM_SVCS=${EDPM_SVCS:-"0"}
+EDPM_DEPLOY_PREP=${EDPM_DEPLOY_PREP:-"0"}
+EDPM_DEPLOY_STANDARD=${EDPM_DEPLOY_STANDARD:-"0"}
 
 # node0 node1 node2
 NODES=2
@@ -36,13 +37,6 @@ if [ $CRC -eq 1 ]; then
     fi
 fi
 
-eval $(crc oc-env)
-oc login -u kubeadmin -p 12345678 https://api.crc.testing:6443
-if [[ $? -gt 0 ]]; then
-    echo "Error: Unable to authenticate to OpenShift"
-    exit 1
-fi
-
 if [ $ATTACH -eq 1 ]; then
     make crc_attach_default_interface
 fi
@@ -64,6 +58,12 @@ if [ $OPER -eq 1 ]; then
 fi
 
 if [ $CONTROL -eq 1 ]; then
+    eval $(crc oc-env)
+    oc login -u kubeadmin -p 12345678 https://api.crc.testing:6443
+    if [[ $? -gt 0 ]]; then
+        echo "Error: Unable to authenticate to OpenShift"
+        exit 1
+    fi
     oc get pods -n openstack-operators | grep controller
     # change repo or branch from explicit defaults as needed
     OPENSTACK_REPO=https://github.com/openstack-k8s-operators/openstack-operator.git \
@@ -121,6 +121,12 @@ if [ $EDPM_DEPLOY_PREP -eq 1 ]; then
 fi
 
 if [ $EDPM_DEPLOY_STANDARD -eq 1 ]; then
+    eval $(crc oc-env)
+    oc login -u kubeadmin -p 12345678 https://api.crc.testing:6443
+    if [[ $? -gt 0 ]]; then
+        echo "Error: Unable to authenticate to OpenShift"
+        exit 1
+    fi
     pushd ~/antelope/crs/
     kustomize build data_plane/overlay/standard > data_plane.yaml
     oc create -f data_plane.yaml

@@ -9,6 +9,7 @@ A guide to my scripts directory.
   volume or VM
 - [clean.sh](clean.sh) Remove what deploy.sh added
 - [ceph](ceph) Directory of scripts related to Ceph
+- [rebuild.sh](rebuild.sh) Wrapper to deploy.sh to rebuild after clean.sh
 - [latest.sh](latest.sh) See Dependencies
 
 ## Dependencies

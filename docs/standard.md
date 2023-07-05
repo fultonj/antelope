@@ -188,22 +188,14 @@ Other vars can keep their defualts of 0 (though NODES defaults to 2).
 
 ### Deploy Again
 
-To deploy again without having to redploy and configure CRC,
-use [deploy.sh](../scripts/deploy.sh).
+- To deploy again without having to redploy and configure CRC,
+  use [rebuild.sh](../scripts/rebuild.sh).
 
-- Set `PVC`, `DEPS` and `CONTROL` to `1` to deploy a new control plane
+- When `oc get pods` shows that `nova-api` and `dnsmasq-dns` are
+  running the control plane should be ready.
 
-while the control plane is still coming up build the EDPM nodes
-sequentially with the following tags set to `1`.
-
-- `EDPM_NODE`
-- `EDPM_NODE_REPOS`
-
-When `oc get pods` shows that `nova-api` and `dnsmasq-dns` are running
-the contorl plane should be ready.
-
-You should now be able to start again from "Create an
-OpenStackDataPlane CR with edpm_deploy_prep"
+- You should now be able to start again from "Create an
+  OpenStackDataPlane CR with edpm_deploy_prep".
 
 ### Clean Everything
 
