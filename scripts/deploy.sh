@@ -6,11 +6,11 @@ ATTACH=0
 PVC=0
 DEPS=0
 OPER=0
+CONTROL=0
 EDPM_NODE=0
 EDPM_NODE_REPOS=0
 EDPM_NODE_DISKS=0
 EDPM_SVCS=0
-CONTROL=0
 
 # node0 node1 node2
 NODES=2
@@ -61,6 +61,14 @@ if [ $OPER -eq 1 ]; then
     make BMO_SETUP=false openstack
 fi
 
+if [ $CONTROL -eq 1 ]; then
+    oc get pods -n openstack-operators | grep controller
+    # change repo or branch from explicit defaults as needed
+    OPENSTACK_REPO=https://github.com/openstack-k8s-operators/openstack-operator.git \
+        OPENSTACK_BRANCH=main DBSERVICE=galera \
+        make openstack_deploy
+fi
+
 cd devsetup
 
 if [ $EDPM_NODE -eq 1 ]; then
@@ -96,13 +104,4 @@ if [ $EDPM_SVCS -eq 1 ]; then
     popd
 fi
 
-cd ..
-
-if [ $CONTROL -eq 1 ]; then
-    oc get pods -n openstack-operators | grep controller
-    # change repo or branch from explicit defaults as needed
-    OPENSTACK_REPO=https://github.com/openstack-k8s-operators/openstack-operator.git \
-        OPENSTACK_BRANCH=main DBSERVICE=galera \
-        make openstack_deploy
-fi
-
+popd
