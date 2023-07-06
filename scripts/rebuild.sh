@@ -38,6 +38,34 @@ export EDPM_NODE_REPOS=1
 bash deploy.sh
 unset EDPM_NODE_REPOS
 
-## TODO
-# 1. wait and run EDPM_DEPLOY_PREP
-# 2. confirm control plane is ready
+# Wait until we can deploy prep
+eval $(crc oc-env)
+oc login -u kubeadmin -p 12345678 https://api.crc.testing:6443
+echo "Wait for nova-metadata-internal ingress IP to be set"
+while [ 1 ]; do
+    if [[ ! -z $(oc get svc nova-metadata-internal -o json \
+            | jq -r '.status.loadBalancer.ingress[0].ip') ]]; then
+        break
+    fi
+    echo -n "."
+    sleep 1
+done
+
+# Create crs/data_plane/base/deployment.yaml to kustomize later
+export EDPM_DEPLOY_PREP=1
+bash deploy.sh
+unset EDPM_DEPLOY_PREP
+
+# View control plane end points
+oc get pods | grep nova-api
+echo "Waiting for the nova-api pod to be running"
+while [ 1 ]; do
+    if [[ $(oc get pods | grep nova-api | grep Running | wc -l) -gt 0 ]]; then
+        break
+    fi
+    echo -n "."
+    sleep 1
+done
+export OS_CLOUD=default
+export OS_PASSWORD=12345678
+openstack endpoint list
