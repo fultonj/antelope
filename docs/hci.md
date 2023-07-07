@@ -22,13 +22,22 @@ A `crs/data_plane/base/deployment.yaml` file exists to kustomize.
 
 ## Configure the networks of the EDPM nodes
 
-Use kustomize to apply the following overlays
-
-- data plane [standard](../crs/data_plane/overlay/standard)
-- data plane [net-only](../crs/data_plane/overlay/net-only)
+Create a data.yaml file with the
+[net-only](../crs/data_plane/overlay/net-only)
+overlay which disables nova and only configures/validates the network
+by shortening the services list.
+```
+pushd ~/antelope/crs/
+kustomize build data_plane/overlay/net-only > data.yaml
+```
+Deploy the data plane.
+```
+oc create -f data.yaml
+```
+You should now have three EDPM nodes which can run Ceph.
 
 ### Todo
-- create net-only overlay
+- use edpm disks by default (won't harm standard and needed for ceph)
 
 ## Install Ceph on EDPM nodes
 

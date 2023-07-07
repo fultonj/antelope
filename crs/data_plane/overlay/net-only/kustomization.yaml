@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: openstack
+
+resources:
+- ../../base/
+ 
+# Do not deploy nova and only configure/validate network
+patches:
+  - patch: |-
+      - op: replace
+        path: /spec/roles/edpm-compute/services
+        value:
+          - configure-network
+          - validate-network
+      - op: remove
+        path: /spec/roles/edpm-compute/nodeTemplate/nova
+    target:
+      kind: OpenStackDataPlane
+
+# Also enable deployment
+patchesStrategicMerge:
+- deployment.yaml
