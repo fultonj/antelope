@@ -20,6 +20,14 @@ environment and [rebuild.sh](../scripts/rebuild.sh) was used to
 rebuild with registered edpm nodes and a working control plane.
 A `crs/data_plane/base/deployment.yaml` file exists to kustomize.
 
+The EDPM nodes should have disks. They can be added, after rebuild.sh
+is run, like this.
+```
+export EDPM_NODE_DISKS=1
+./deploy.sh
+unset EDPM_NODE_DISKS
+```
+
 ## Configure the networks of the EDPM nodes
 
 Create a data.yaml file with the
@@ -36,26 +44,14 @@ oc create -f data.yaml
 ```
 You should now have three EDPM nodes which can run Ceph.
 
-### Todo
-- use edpm disks by default (won't harm standard and needed for ceph)
-
 ## Install Ceph on EDPM nodes
 
 Run [install_ceph.sh](../scripts/ceph/install_ceph.sh)
 from within the [scripts/ceph](../scripts/ceph/) directory
-to install Ceph with network isolation one a single node with the
-following parameters.
-```
-NET=0
-PRE=1
-BOOT=1
-SINGLE_OSD=0
-SSH_KEYS=1
-SPEC=1
-CEPHX=1
-NODES=2
-```
-Run [ceph_secret.sh](../scripts/ceph/ceph_secret.sh) to create a secret viewable via
+to install Ceph with network isolation one a single node.
+
+Run [ceph_secret.sh](../scripts/ceph/ceph_secret.sh) to create a
+secret viewable via
 `oc get secret ceph-conf-files -o json | jq -r '.data."ceph.conf"' | base64 -d`
 
 Ceph should now be running on all EDPM nodes and the `ceph-conf-files`
@@ -70,6 +66,6 @@ Use kustomize to apply the following overlays
 - data plane [hci](../crs/data_plane/overlay/hci)
 
 ### Todo
-- use kustomize to update existing control plane CR for ceph
 - use kustomize to set FSID environment variable
+- use kustomize to update existing control plane CR for ceph
 - create hci overlay
