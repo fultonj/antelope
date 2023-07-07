@@ -1,13 +1,13 @@
 #!/bin/bash
 
 NET=0
-PRE=0
-BOOT=0
+PRE=1
+BOOT=1
 SINGLE_OSD=0
-SSH_KEYS=0
-SPEC=0
-CEPHX=0
-NODES=0
+SSH_KEYS=1
+SPEC=1
+CEPHX=1
+NODES=2
 
 RSA="/home/$USER/install_yamls/out/edpm/ansibleee-ssh-key-id_rsa"
 OPT="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
