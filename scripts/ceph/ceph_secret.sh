@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DELETE=0
+DELETE=1
 
 SSH=$(bash ../ssh_node.sh 0)
 KEY=$($SSH "cat /etc/ceph/ceph.client.openstack.keyring | base64 -w 0")
