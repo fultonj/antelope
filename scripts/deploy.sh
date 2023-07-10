@@ -65,10 +65,11 @@ if [ $CONTROL -eq 1 ]; then
         exit 1
     fi
     oc get pods -n openstack-operators | grep controller
-    # change repo or branch from explicit defaults as needed
-    OPENSTACK_REPO=https://github.com/openstack-k8s-operators/openstack-operator.git \
-        OPENSTACK_BRANCH=main DBSERVICE=galera \
-        make openstack_deploy
+    # Save a copy of the base dataplane CR in my CRs directory
+    TARGET=$HOME/antelope/crs/control_plane/base/deployment.yaml
+    DBSERVICE=galera make openstack_deploy_prep
+    kustomize build out/openstack/openstack/cr > $TARGET
+    oc create -f $TARGET
 fi
 
 cd devsetup
