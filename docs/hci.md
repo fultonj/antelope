@@ -46,12 +46,21 @@ You should now have three EDPM nodes which can run Ceph.
 
 ## Install Ceph on EDPM nodes
 
-Run [install_ceph.sh](../scripts/ceph/install_ceph.sh)
-from within the [scripts/ceph](../scripts/ceph/) directory
-to install Ceph with network isolation one a single node.
+```
+pushd ~/antelope/scripts/ceph
+./install_ceph.sh
+./ceph_secret.sh
+popd
+```
 
-Run [ceph_secret.sh](../scripts/ceph/ceph_secret.sh) to create a
-secret viewable via
+### Details
+
+The [install_ceph.sh](../scripts/ceph/install_ceph.sh)
+script uses content from [scripts/ceph](../scripts/ceph/)
+directory to install Ceph.
+
+The [ceph_secret.sh](../scripts/ceph/ceph_secret.sh)
+script creates a secret viewable via
 `oc get secret ceph-conf-files -o json | jq -r '.data."ceph.conf"' | base64 -d`
 
 Ceph should now be running on all EDPM nodes and the `ceph-conf-files`
