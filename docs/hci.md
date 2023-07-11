@@ -110,6 +110,20 @@ oc get pods -w | grep edpm
 oc logs -f dataplane-deployment-configure-network-edpm-compute-skw2g
 ```
 
+## Workarounds
+
+Because the firewall on EDPM nodes currently only allows port 22
+clients won't be able to use Ceph.
+
+Observe the default SSH rule on all nodes
+```
+for I in 0 1 2; do $(./ssh_node.sh $I ) nft list ruleset | grep ssh ; done
+```
+Flush the ruleset on all nodes
+```
+for I in 0 1 2; do $(./ssh_node.sh $I ) nft flush ruleset ; done
+```
+
 ## Test
 
 Use [test.sh](../scripts/test.sh)
