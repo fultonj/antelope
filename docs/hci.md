@@ -68,13 +68,23 @@ secret can be used to access it.
 
 ## Configure OpenStack to use the collocated Ceph server
 
-Use kustomize to apply the following overlays
+### Update the Control Plane to use Ceph
 
-- control plane [ceph](../crs/control_plane/overlay/ceph)
-- data plane [ceph](../crs/data_plane/overlay/ceph)
-- data plane [hci](../crs/data_plane/overlay/hci)
+Use the [data plane ceph overlay](../crs/control_plane/overlay/ceph)
+with kustomize and `sed` to swap in the correct FSID.
 
-### Todo
-- use kustomize to set FSID environment variable
-- use kustomize to update existing control plane CR for ceph
-- create hci overlay
+```
+pushd ~/antelope/crs/
+FSID=$(oc get secret ceph-conf-files -o json | jq -r '.data."ceph.conf"' \
+  | base64 -d | grep fsid | sed -e 's/fsid = //' | xargs)
+kustomize build control_plane/overlay/ceph | sed "s/_FSID_/${FSID}/" > control.yaml
+oc apply -f control.yaml
+popd
+```
+
+### Complete configuration of the Data Plane
+
+Todo
+- Use [ceph](../crs/data_plane/overlay/ceph) to create [hci](../crs/data_plane/overlay/hci)
+
+
