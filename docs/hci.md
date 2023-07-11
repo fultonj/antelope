@@ -71,7 +71,8 @@ secret can be used to access it.
 ### Update the Control Plane to use Ceph
 
 Use the [data plane ceph overlay](../crs/control_plane/overlay/ceph)
-with kustomize and `sed` to swap in the correct FSID.
+with kustomize and `sed` (to swap in the correct FSID) to update the
+existing control plane.
 
 ```
 pushd ~/antelope/crs/
@@ -82,9 +83,46 @@ oc apply -f control.yaml
 popd
 ```
 
+The [deployment.yaml in the control plane ceph overlay](../crs/control_plane/overlay/ceph/deployment.yaml)
+contains `extraMounts` and `customServiceConfig` for Glance and Cinder to use Ceph which are applied via
+[patchesStrategicMerge](https://kubectl.docs.kubernetes.io/references/kustomize/builtins/#_patchesstrategicmerge_).
+
 ### Complete configuration of the Data Plane
 
-Todo
-- Use [ceph](../crs/data_plane/overlay/ceph) to create [hci](../crs/data_plane/overlay/hci)
+The [data plane hci overlay](../crs/data_plane/overlay/hci) adds
+contains `extraMounts` and `customServiceConfig` for Nova to use
+Ceph. It also restores the full service list so that the EDPM
+deployment is complete. We also use `sed` to swap in the FSID.
 
+```
+pushd ~/antelope/crs/
+FSID=$(oc get secret ceph-conf-files -o json | jq -r '.data."ceph.conf"' \
+  | base64 -d | grep fsid | sed -e 's/fsid = //' | xargs)
+kustomize build data_plane/overlay/hci | sed "s/_FSID_/${FSID}/" > data.yaml
+oc apply -f data.yaml
+popd
+```
 
+## Watch Ansible
+
+```
+oc get pods -w | grep edpm
+oc logs -f dataplane-deployment-configure-network-edpm-compute-skw2g
+```
+
+## Test
+
+Use [test.sh](../scripts/test.sh)
+
+- Set `CEPH` to `1`
+- Adjust other variables as needed
+
+You should be able to create a glance image hosted on ceph and see it
+in the images pool. You should then be able to create private network
+and be able to boot a VM. You should also be able to attach a volume
+to it.
+
+## Clean
+
+Use [rebuild.sh](../scripts/rebuild.sh) to attempt another deployment
+or use [clean.sh](../scripts/clean.sh).
