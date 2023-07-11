@@ -147,6 +147,10 @@ if [ $VM -eq 1 ]; then
         sleep 30
         openstack server list
     fi
+    if [ $CEPH -eq 1 ]; then
+        echo "Listing Nova Ceph Pool"
+        run_on_mon "rbd -p vms ls -l"
+    fi
 fi
 
 if [ $CONSOLE -eq 1 ]; then
