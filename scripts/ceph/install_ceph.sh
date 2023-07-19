@@ -52,7 +52,7 @@ fi
 
 if [ $SSH_KEYS -eq 1 ]; then
     scp -i $RSA $OPT root@$IP:/etc/ceph/ceph.pub .
-    URL=$(cat ceph.pub | curl -F 'sprunge=<-' http://sprunge.us)
+    URL=$(cat ceph.pub | curl -F 'f:1=<-' ix.io)
     rm ceph.pub
 
     ANSIBLE_HOST_KEY_CHECKING=False ansible \
