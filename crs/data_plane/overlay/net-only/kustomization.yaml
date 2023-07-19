@@ -17,7 +17,3 @@ patches:
         path: /spec/roles/edpm-compute/nodeTemplate/nova
     target:
       kind: OpenStackDataPlane
-
-# Also enable deployment
-patchesStrategicMerge:
-- deployment.yaml

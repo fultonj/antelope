@@ -76,8 +76,7 @@ kustomize build data_plane/overlay/standard > data_plane.yaml
 ```
 The
 [deployment.yaml in the standard overlay](../crs/data_plane/overlay/standard/deployment.yaml)
-updates the service list, configures libvirt with QEMU and sets
-`deployStrategy` true (more details on that below) by using
+updates the service list and configures libvirt with QEMU by using
 [patchesStrategicMerge](https://kubectl.docs.kubernetes.io/references/kustomize/builtins/#_patchesstrategicmerge_).
 
 ### Customize the OpenStackDataPlane CR Manually
@@ -88,12 +87,6 @@ cp $HOME/antelope/crs/data_plane/base/deployment.yaml ~/antelope/crs/data_plane.
 ```
 
 Apply the following two changes for now.
-
-Set the `spec.deployStrategy.deploy` field to `True` as
-[documented](https://openstack-k8s-operators.github.io/dataplane-operator/deploying/#deploy-the-dataplane)
-so that the
-[dataplane-operator provided services](https://openstack-k8s-operators.github.io/dataplane-operator/composable_services)
-will be configured (by Ansible) on the EDPM nodes.
 
 Update the
 [dataplane-operator provided services](https://openstack-k8s-operators.github.io/dataplane-operator/composable_services/#dataplane-operator-provided-services)
