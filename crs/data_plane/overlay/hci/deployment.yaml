@@ -37,10 +37,8 @@ spec:
             images_rbd_glance_copy_timeout=600
             rbd_user=openstack
             rbd_secret_uuid=_FSID_
-      # restore full services list (except repo-setup)
+      # restore rest of the services list
       services:
-        - configure-network
-        - validate-network
         - install-os
         - configure-os
         - run-os
