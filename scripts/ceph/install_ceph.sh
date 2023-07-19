@@ -1,5 +1,6 @@
 #!/bin/bash
 
+IPAM=1
 NET=0
 PRE=1
 BOOT=1
@@ -12,10 +13,22 @@ NODES=2
 RSA="/home/$USER/install_yamls/out/edpm/ansibleee-ssh-key-id_rsa"
 OPT="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
 IP=192.168.122.100
-STORAGE_NET=172.18.0
-MON_IP=$(ssh -i $RSA $OPT root@$IP \
-             ip a | grep $STORAGE_NET | awk {'print $2'} \
-             | awk 'BEGIN { FS = "/" } ; { print $1 }')
+
+if [ $IPAM -eq 1 ]; then
+    # https://github.com/openstack-k8s-operators/install_yamls/pull/373
+    # EDPM nodes get their IPs from IPAM so look them up
+    # and then update the ceph_spec.yml with the new values
+    STORAGE_NET=172.18.0
+    MGMT_NET=192.168.122
+    for I in $(seq $NODES -1 0); do
+        # loop goes backwards so that MON_IP for first host is defined
+        MON_IP=$(ssh -i $RSA $OPT root@$MGMT_NET.10${I} \
+                     ip a | grep $STORAGE_NET | awk {'print $2'} \
+                     | awk 'BEGIN { FS = "/" } ; { print $1 }')
+        sed -i s/$STORAGE_NET.10${I}/$MON_IP/g ceph_spec.yml
+    done
+    echo "The MON IP for bootstrap is: $MON_IP"
+fi
 
 if [ $NET -eq 1 ]; then
     # install os-net-config on edpm-compute-0 to configure network isolation
