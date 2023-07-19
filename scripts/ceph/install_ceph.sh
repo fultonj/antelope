@@ -12,7 +12,10 @@ NODES=2
 RSA="/home/$USER/install_yamls/out/edpm/ansibleee-ssh-key-id_rsa"
 OPT="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
 IP=192.168.122.100
-MON_IP=172.18.0.100
+STORAGE_NET=172.18.0
+MON_IP=$(ssh -i $RSA $OPT root@$IP \
+             ip a | grep $STORAGE_NET | awk {'print $2'} \
+             | awk 'BEGIN { FS = "/" } ; { print $1 }')
 
 if [ $NET -eq 1 ]; then
     # install os-net-config on edpm-compute-0 to configure network isolation
