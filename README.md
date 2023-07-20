@@ -19,5 +19,4 @@ Some of my scripts are just shell wrappers for
 ## Deployments
 
 - [Standard](docs/standard.md)
-- [External Ceph](docs/ceph.md)
 - [HCI](docs/hci.md)

@@ -1,7 +1,6 @@
 #!/bin/bash
 
 IPAM=1
-NET=0
 PRE=1
 BOOT=1
 SINGLE_OSD=0
@@ -28,16 +27,6 @@ if [ $IPAM -eq 1 ]; then
         sed -i s/$STORAGE_NET.10${I}/$MON_IP/g ceph_spec.yml
     done
     echo "The MON IP for bootstrap is: $MON_IP"
-fi
-
-if [ $NET -eq 1 ]; then
-    # install os-net-config on edpm-compute-0 to configure network isolation
-    # wallaby verseions are used to be compatible with adoption
-    scp -i $RSA $OPT wallaby_repos.sh root@$IP:/tmp/wallaby_repos.sh
-    ssh -i $RSA $OPT root@$IP "bash /tmp/wallaby_repos.sh"
-    ssh -i $RSA $OPT root@$IP "dnf install -y os-net-config openvswitch"
-    scp -i $RSA $OPT network.sh root@$IP:/tmp/network.sh
-    ssh -i $RSA $OPT root@$IP "bash /tmp/network.sh"
 fi
 
 if [ $PRE -eq 1 ]; then
