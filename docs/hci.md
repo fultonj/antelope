@@ -20,14 +20,6 @@ environment and [rebuild.sh](../scripts/rebuild.sh) was used to
 rebuild with registered edpm nodes and a working control plane.
 A `crs/data_plane/base/deployment.yaml` file exists to kustomize.
 
-The EDPM nodes should have disks. They can be added, after rebuild.sh
-is run, like this.
-```
-export EDPM_NODE_DISKS=1
-./deploy.sh
-unset EDPM_NODE_DISKS
-```
-
 ## Configure the networks of the EDPM nodes
 
 Create a data.yaml file with the
@@ -42,27 +34,44 @@ Deploy the data plane.
 ```
 oc create -f data.yaml
 ```
-You should now have three EDPM nodes which can run Ceph.
+You should now have three EDPM nodes configured with network isolation
+which can run Ceph.
 
 ## Install Ceph on EDPM nodes
 
+Use the
+[ceph.yml](https://github.com/fultonj/ci-framework/blob/cephadm/ci_framework/playbooks/ceph.yml)
+playbook from the
+[CI Framework](https://github.com/openstack-k8s-operators/ci-framework)
+as described in
+[cifmw_cephadm README](https://github.com/fultonj/ci-framework/blob/cephadm/ci_framework/roles/cifmw_cephadm/README.md).
+
+Update the default inventory with the group `edpm` containing `N` EDPM
+nodes.
 ```
-pushd ~/antelope/scripts/ceph
-./install_ceph.sh
-./ceph_secret.sh
-popd
+export N=2
+echo -e "localhost ansible_connection=local\n[edpm]" > ~/ci-framework/inventory.yml
+for I in $(seq 100 $((N+100))); do
+  echo 192.168.122.${I} >> ~/ci-framework/inventory.yml
+done
 ```
-
-### Details
-
-The [install_ceph.sh](../scripts/ceph/install_ceph.sh)
-script uses content from [scripts/ceph](../scripts/ceph/)
-directory to install Ceph.
-
-The [ceph_secret.sh](../scripts/ceph/ceph_secret.sh)
-script creates a secret viewable via
-`oc get secret ceph-conf-files -o json | jq -r '.data."ceph.conf"' | base64 -d`
-
+Configure the Ansible environment to use the SSH key created by `install_yamls`.
+```
+export ANSIBLE_REMOTE_USER=root
+export ANSIBLE_SSH_PRIVATE_KEY=~/install_yamls/out/edpm/ansibleee-ssh-key-id_rsa
+export ANSIBLE_HOST_KEY_CHECKING=False
+```
+Run the playbook to deploy Ceph.
+```
+cd ~/ci-framework/
+ansible-playbook ci_framework/playbooks/ceph.yml
+```
+Delete the old Ceph secret (if you have one) and create a new one from
+the secret file created by Ansible.
+```
+oc delete secret ceph-conf-files
+oc create -f /tmp/k8s_ceph_secret.yml
+```
 Ceph should now be running on all EDPM nodes and the `ceph-conf-files`
 secret can be used to access it.
 

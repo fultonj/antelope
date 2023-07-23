@@ -19,6 +19,7 @@ repositories in your home directory.
 
 - https://github.com/openstack-k8s-operators/install_yamls
 - https://github.com/openstack-k8s-operators/dataplane-operator
+- https://github.com/openstack-k8s-operators/ci-framework
 
 I personally check out my own forks of the above projects and use them
 in my home directory so that I can test my own patches. I use 

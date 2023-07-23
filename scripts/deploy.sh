@@ -10,7 +10,6 @@ CONTROL=${CONTROL:-"0"}
 EDPM_NODE=${EDPM_NODE:-"0"}
 EDPM_NODE=${EDPM_NODE:-"0"}
 EDPM_NODE_REPOS=${EDPM_NODE_REPOS:-"0"}
-EDPM_NODE_DISKS=${EDPM_NODE_DISKS:-"0"}
 EDPM_SVCS=${EDPM_SVCS:-"0"}
 EDPM_DEPLOY_PREP=${EDPM_DEPLOY_PREP:-"0"}
 EDPM_DEPLOY_STANDARD=${EDPM_DEPLOY_STANDARD:-"0"}
@@ -92,14 +91,6 @@ if [ $EDPM_NODE_REPOS -eq 1 ]; then
 fi
 
 popd # out of install_yamls
-
-if [ $EDPM_NODE_DISKS -eq 1 ]; then
-    pushd ~/antelope/scripts/ceph/
-    for I in $(seq $NODE_START $NODES); do
-        bash edpm-compute-disk.sh $I
-    done
-    popd
-fi
 
 if [ $EDPM_SVCS -eq 1 ]; then
     pushd ~/dataplane-operator/config/services
