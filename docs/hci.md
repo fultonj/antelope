@@ -40,11 +40,12 @@ which can run Ceph.
 ## Install Ceph on EDPM nodes
 
 Use the
-[ceph.yml](https://github.com/fultonj/ci-framework/blob/cephadm/ci_framework/playbooks/ceph.yml)
+[ceph.yml](https://github.com/openstack-k8s-operators/ci-framework/blob/main/ci_framework/playbooks/ceph.yml)
+
 playbook from the
 [CI Framework](https://github.com/openstack-k8s-operators/ci-framework)
 as described in
-[cifmw_cephadm README](https://github.com/fultonj/ci-framework/blob/cephadm/ci_framework/roles/cifmw_cephadm/README.md).
+[cifmw_cephadm README](https://github.com/openstack-k8s-operators/ci-framework/blob/main/ci_framework/roles/cifmw_cephadm/README.md).
 
 Update the default inventory with the group `edpm` containing `N` EDPM
 nodes.
