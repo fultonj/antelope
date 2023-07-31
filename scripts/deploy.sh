@@ -80,7 +80,7 @@ if [ $EDPM_NODE -eq 1 ]; then
         else
             RAM=8
         fi
-        make edpm_compute EDPM_COMPUTE_SUFFIX=$I EDPM_COMPUTE_VCPUS=8 EDPM_COMPUTE_RAM=$RAM
+        make edpm_compute EDPM_COMPUTE_SUFFIX=$I EDPM_COMPUTE_VCPUS=8 EDPM_COMPUTE_RAM=$RAM CENTOS_9_STREAM_URL=https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-20230720.0.x86_64.qcow2
     done
 fi
 
