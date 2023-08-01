@@ -45,7 +45,7 @@ I prefer to use my own copy of
 in my home directory so some of my CR kustomize overlays add an
 `extraMounts` to follow the pattern described in
 [Testing ansibleEE with NFS](https://openstack-k8s-operators.github.io/edpm-ansible/testing_with_ansibleee.html)
-([notes](../docs/debug/nfs.md)).
+([notes](../docs/notes/nfs.md)).
 
 ## hello_world
 
