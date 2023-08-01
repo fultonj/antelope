@@ -15,5 +15,25 @@ patches:
           - validate-network
       - op: remove
         path: /spec/roles/edpm-compute/nodeTemplate/nova
+      - op: add
+        path: /spec/roles/edpm-compute/nodeTemplate/extraMounts
+        value:
+          - extraVolType: edpm-ansible
+            mounts:
+            - mountPath: /usr/share/ansible/collections/ansible_collections/osp/edpm
+              name: edpm-ansible
+            volumes:
+            - name: edpm-ansible
+              persistentVolumeClaim:
+                claimName: edpm-ansible
+                readOnly: true
+          - extraVolType: Logs
+            mounts:
+            - mountPath: /runner/artifacts
+              name: ansible-logs
+            volumes:
+            - name: ansible-logs
+              persistentVolumeClaim:
+                claimName: ansible-ee-logs
     target:
       kind: OpenStackDataPlane
