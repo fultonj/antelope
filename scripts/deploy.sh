@@ -112,11 +112,15 @@ if [ $EDPM_DEPLOY_PREP -eq 1 ]; then
     pushd ~/install_yamls
     DATAPLANE_CHRONY_NTP_SERVER=pool.ntp.org \
         DATAPLANE_TOTAL_NODES=3 \
-        DATAPLANE_SINGLE_NODE=false \
         make edpm_deploy_prep
     oc kustomize out/openstack/dataplane/cr > $TARGET
     popd
     ls -l $TARGET
+
+    # Removing this argument:
+    #   DATAPLANE_SINGLE_NODE=false \
+    # Because it causes this error:
+    #   https://paste.opendev.org/show/bg6FENo2XNqH8a1CVPEB/
 fi
 
 if [ $EDPM_DEPLOY_STANDARD -eq 1 ]; then
