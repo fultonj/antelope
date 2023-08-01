@@ -34,9 +34,18 @@ kustomize build control_plane/overlay/ceph
 
 ## data_plane
 
-[data_plane](data_plane) assumes a file like `deployment.yaml` in in
+[data_plane](data_plane) assumes a file like `deployment.yaml` in
 the base directory and does similar substitutions with it like
 control_plane.
+
+## NFS share to EDPM Ansible
+
+I prefer to use my own copy of
+[edpm-ansible](https://github.com/openstack-k8s-operators/edpm-ansible)
+in my home directory so some of my CR kustomize overlays add an
+`extraMounts` to follow the pattern described in
+[Testing ansibleEE with NFS](https://openstack-k8s-operators.github.io/edpm-ansible/testing_with_ansibleee.html)
+([notes](../docs/debug/nfs.md)).
 
 ## hello_world
 
