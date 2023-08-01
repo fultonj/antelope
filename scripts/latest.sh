@@ -3,6 +3,7 @@
 declare -a REPOS=(
     install_yamls
     dataplane-operator
+    edpm-ansible
 )
 GIT_USER=openstack-k8s-operators
 
