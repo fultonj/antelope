@@ -69,6 +69,13 @@ if [ $CONTROL -eq 1 ]; then
     DBSERVICE=galera make openstack_deploy_prep
     kustomize build out/openstack/openstack/cr > $TARGET
     oc create -f $TARGET
+
+    # "make netconfig_deploy" was missing and presented as:
+    # AnsibleUndefinedVariable: No variable found with this name: internal_api_mtu
+    # openstack_deploy does both openstack_deploy_prep and netconfig_deploy
+    # https://github.com/openstack-k8s-operators/install_yamls/blob/
+    # /b05c31abc27f4cc85dac50c4c6cc0ffe3de55ec0/Makefile#L533
+    make netconfig_deploy
 fi
 
 cd devsetup
