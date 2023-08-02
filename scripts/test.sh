@@ -35,7 +35,7 @@ if [ $OVERVIEW -eq 1 ]; then
 fi
 
 function run_on_mon {
-    $(bash ssh_node.sh) "./cephadm shell -- $1" 2> /dev/null
+    $(bash ssh_node.sh) "cephadm shell -- $1" 2> /dev/null
 }
 
 if [ $CINDER -eq 1 ]; then
