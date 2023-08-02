@@ -1,7 +1,7 @@
 apiVersion: core.openstack.org/v1beta1
 kind: OpenStackControlPlane
 metadata:
-  name: openstack-network-isolation
+  name: openstack-galera-network-isolation
   namespace: openstack
 spec:
   extraMounts:
