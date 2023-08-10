@@ -40,5 +40,6 @@ spec:
       # restore rest of the services list
       services:
         - install-os
+        - ceph-client
         - configure-os
         - run-os
