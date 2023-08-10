@@ -25,6 +25,7 @@ A `crs/data_plane/base/deployment.yaml` file exists to kustomize.
 Create a data.yaml file with the
 [net-only](../crs/data_plane/overlay/net-only)
 overlay which disables nova and only configures/validates the network
+and puts directives in place to open the firewall for Ceph
 by shortening the services list.
 ```
 pushd ~/antelope/crs/
@@ -118,20 +119,6 @@ popd
 ```
 oc get pods -w | grep edpm
 oc logs -f dataplane-deployment-configure-network-edpm-compute-skw2g
-```
-
-## Workarounds
-
-Because the firewall on EDPM nodes currently only allows port 22
-clients won't be able to use Ceph.
-
-Observe the default SSH rule on all nodes
-```
-for I in 0 1 2; do $(./ssh_node.sh $I ) nft list ruleset | grep ssh ; done
-```
-Flush the ruleset on all nodes
-```
-for I in 0 1 2; do $(./ssh_node.sh $I ) nft flush ruleset ; done
 ```
 
 ## Test

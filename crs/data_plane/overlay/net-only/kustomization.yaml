@@ -13,6 +13,7 @@ patches:
         value:
           - configure-network
           - validate-network
+          - ceph-hci-pre
       - op: remove
         path: /spec/roles/edpm-compute/nodeTemplate/nova
       - op: add
