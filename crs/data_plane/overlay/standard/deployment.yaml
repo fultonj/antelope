@@ -4,23 +4,10 @@ metadata:
   name: openstack-edpm
   namespace: openstack
 spec:
+  configMaps:
+    - nova-libvirt-qemu
   roles:
     edpm-compute:
-      nodeTemplate:
-        extraMounts:
-        - extraVolType: edpm-ansible
-          mounts:
-          - mountPath: /usr/share/ansible/collections/ansible_collections/osp/edpm
-            name: edpm-ansible
-          volumes:
-          - name: edpm-ansible
-            persistentVolumeClaim:
-              claimName: edpm-ansible
-              readOnly: true
-        nova:
-          customServiceConfig: |
-            [libvirt]
-            virt_type = qemu
       # remove repo-setup from services list
       services:
         - configure-network
@@ -28,3 +15,6 @@ spec:
         - install-os
         - configure-os
         - run-os
+        - ovn
+        - libvirt
+        - nova

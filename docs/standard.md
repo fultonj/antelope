@@ -62,37 +62,48 @@ popd
 
 [deploy.sh](../scripts/deploy.sh) does this when EDPM_DEPLOY_PREP is used.
 
-### Customize the OpenStackDataPlane CR Automatically
+### Create a configuration snippet
 
-The section below this one describes changes I like to make to my
-standard deployment, how to apply the changes manually, and how to
-apply changes for update.
+Create the
+[nova-libvirt-qemu.yaml](../crs/snipets/nova-libvirt-qemu.yaml)
+snippet, which configures EDPM VMs so they can host nested VMs for
+testing.
+```
+oc create -f snipets/nova-libvirt-qemu.yaml
+```
 
-To have [kustomize](https://kustomize.io/) apply these changes instead
-run:
+### Customize the OpenStackDataPlane CR
+
+Have [kustomize](https://kustomize.io/) apply changes to the
+OpenStackDataPlane CR:
 ```
 pushd ~/antelope/crs/
 kustomize build data_plane/overlay/standard > data_plane.yaml
 ```
 The
 [deployment.yaml in the standard overlay](../crs/data_plane/overlay/standard/deployment.yaml)
-updates the service list and configures libvirt with QEMU by using
-[patchesStrategicMerge](https://kubectl.docs.kubernetes.io/references/kustomize/builtins/#_patchesstrategicmerge_).
+does the following:
 
-### Customize the OpenStackDataPlane CR Manually
+- Updates [dataplane-operator provided services](https://openstack-k8s-operators.github.io/dataplane-operator/composable_services/#dataplane-operator-provided-services) to remove the `repo-setup` service since `EDPM_NODE_REPOS` in [deploy.sh](../scripts/deploy.sh) has already registered the EDPM nodes to their repositories.
 
-Make a copy of the `data_plane.yaml` CR to modify.
+- Adds a `configMaps` list with the
+[nova-libvirt-qemu.yaml snipet](../crs/snipets/nova-libvirt-qemu.yaml)
+
+```diff
+[fultonj@hamfast crs]$ diff -u $TARGET data_plane.yaml
+--- /home/fultonj/antelope/crs/data_plane/base/deployment.yaml	2023-08-14 14:18:25.509513994 -0400
++++ data_plane.yaml	2023-08-14 16:02:52.165976837 -0400
+@@ -4,6 +4,8 @@
+   name: openstack-edpm
+   namespace: openstack
+ spec:
++  configMaps:
++    - nova-libvirt-qemu
+   deployStrategy:
+     deploy: true
+   nodes:
+[fultonj@hamfast crs]$
 ```
-cp $HOME/antelope/crs/data_plane/base/deployment.yaml ~/antelope/crs/data_plane.yaml
-```
-
-Apply the following two changes for now.
-
-Update the
-[dataplane-operator provided services](https://openstack-k8s-operators.github.io/dataplane-operator/composable_services/#dataplane-operator-provided-services)
-to remove the `repo-setup` service since `EDPM_NODE_REPOS`
-in [deploy.sh](../scripts/deploy.sh) has already registered the EDPM
-nodes to their repositories.
 
 ## Run EDPM Ansible
 ```
@@ -103,37 +114,6 @@ I then like to use the following to watch the playbooks:
 oc get pods -w | grep edpm
 oc logs -f dataplane-deployment-configure-network-edpm-compute-skw2g
 ```
-
-### Re-run Ansible to apply configuration updates
-
-If you need to make a configuration update, edit `data_plane.yaml` and
-and run `oc apply -f data_plane.yaml`.
-
-For example, change this line:
-```
-        nova: {}
-```
-to:
-```
-        nova:
-          cellName: cell1
-          customServiceConfig: |
-            [libvirt]
-            virt_type = qemu
-```
-If you didn't use kustomize to apply my
-[standard overlay](../crs/data_plane/overlay/standard/deployment.yaml)
-then do the above step.
-
-Run `oc apply -f data_plane.yaml`. You should see new Ansible jobs run
-via `oc get pods -w | grep edpm`.Then you can inspect your compute
-node to see if it got the configuration change.
-```
-$(./ssh_node.sh)
-podman exec -ti nova_compute /bin/bash
-cat /etc/nova/nova.conf.d/02-nova-override.conf
-```
-I use `virt_type = qemu` so that my EDPM VMs can host nested VMs for testing.
 
 ### Stop Failing Ansible Jobs
 
@@ -149,6 +129,18 @@ The above shouldn't be necessary unless the Ansible jobs have a
 problem. If all of the Ansible jobs succeed, then the completed
 jobs (returned when running `oc get pods | grep edpm`) will eventually
 be terminated.
+
+## Check if the configuration snipet was applied
+
+After the compute node is deployed, use the following to confirm if
+the configuration was applied.
+```
+$(./ssh_node.sh)
+podman exec -ti nova_compute ls -l /etc/nova/nova.conf.d/
+```
+The above should show a configuration file from the configuration
+snippet (created earlier) in the nova_compute pod's `nova.conf.d`
+directory.
 
 ## Test
 
