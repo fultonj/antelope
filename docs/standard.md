@@ -89,22 +89,6 @@ does the following:
 - Adds a `configMaps` list with the
 [nova-libvirt-qemu.yaml snipet](../crs/snipets/nova-libvirt-qemu.yaml)
 
-```diff
-[fultonj@hamfast crs]$ diff -u $TARGET data_plane.yaml
---- /home/fultonj/antelope/crs/data_plane/base/deployment.yaml	2023-08-14 14:18:25.509513994 -0400
-+++ data_plane.yaml	2023-08-14 16:02:52.165976837 -0400
-@@ -4,6 +4,8 @@
-   name: openstack-edpm
-   namespace: openstack
- spec:
-+  configMaps:
-+    - nova-libvirt-qemu
-   deployStrategy:
-     deploy: true
-   nodes:
-[fultonj@hamfast crs]$
-```
-
 ## Run EDPM Ansible
 ```
 oc create -f data_plane.yaml
