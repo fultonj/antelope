@@ -1,0 +1,20 @@
+apiVersion: dataplane.openstack.org/v1beta1
+kind: OpenStackDataPlaneService
+metadata:
+  name: nova
+spec:
+  label: dataplane-deployment-nova
+  configMaps:
+    - nova-libvirt-qemu
+  secrets:
+    - nova-cell1-compute-config
+  role:
+    name: "Deploy EDPM Nova"
+    hosts: "all"
+    strategy: "linear"
+    tasks:
+      - name: "nova"
+        import_role:
+          name: "osp.edpm.edpm_nova"
+        tags:
+          - "edpm_nova"

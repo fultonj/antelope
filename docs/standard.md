@@ -65,11 +65,23 @@ popd
 ### Create a configuration snippet
 
 Create the
-[nova-libvirt-qemu.yaml](../crs/snipets/nova-libvirt-qemu.yaml)
-snippet, which configures EDPM VMs so they can host nested VMs for
-testing.
+[nova-libvirt-qemu.yaml](../crs/snippets/nova-libvirt-qemu.yaml)
+configuration snippet (so nested VMs can be booted for testing).
 ```
-oc create -f snipets/nova-libvirt-qemu.yaml
+oc create -f snippets/nova-libvirt-qemu.yaml
+```
+Modify the [nova service](https://github.com/openstack-k8s-operators/dataplane-operator/blob/main/config/services/dataplane_v1beta1_openstackdataplaneservice_nova.yaml),
+which ships with the dataplane-operator, to use the `nova-libvirt-qemu`
+snippet by adding it to a new `configMaps` list.
+
+Compare my [example](../crs/services/dataplane_v1beta1_openstackdataplaneservice_nova.yaml)
+to the shipped version.
+```
+diff -u ~/dataplane-operator/config/services/dataplane_v1beta1_openstackdataplaneservice_nova.yaml dataplane_v1beta1_openstackdataplaneservice_nova.yaml
+```
+or simply overwrite the shipped version with mine.
+```
+oc apply -f services/dataplane_v1beta1_openstackdataplaneservice_nova.yaml
 ```
 
 ### Customize the OpenStackDataPlane CR
