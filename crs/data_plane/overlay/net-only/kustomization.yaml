@@ -5,7 +5,7 @@ namespace: openstack
 resources:
 - ../../base/
  
-# Do not deploy nova and only configure/validate network
+# Do not deploy nova yet, but configure network, ntp and ceph firewall ports
 patches:
   - patch: |-
       - op: replace
@@ -13,7 +13,10 @@ patches:
         value:
           - configure-network
           - validate-network
+          - install-os
+          - configure-os
           - ceph-hci-pre
+          - run-os
       - op: add
         path: /spec/roles/edpm-compute/nodeTemplate/extraMounts
         value:
