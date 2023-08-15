@@ -94,12 +94,7 @@ kustomize build data_plane/overlay/standard > data_plane.yaml
 ```
 The
 [deployment.yaml in the standard overlay](../crs/data_plane/overlay/standard/deployment.yaml)
-does the following:
-
-- Updates [dataplane-operator provided services](https://openstack-k8s-operators.github.io/dataplane-operator/composable_services/#dataplane-operator-provided-services) to remove the `repo-setup` service since `EDPM_NODE_REPOS` in [deploy.sh](../scripts/deploy.sh) has already registered the EDPM nodes to their repositories.
-
-- Adds a `configMaps` list with the
-[nova-libvirt-qemu.yaml snipet](../crs/snipets/nova-libvirt-qemu.yaml)
+updates [dataplane-operator provided services](https://openstack-k8s-operators.github.io/dataplane-operator/composable_services/#dataplane-operator-provided-services) to remove the `repo-setup` service since `EDPM_NODE_REPOS` in [deploy.sh](../scripts/deploy.sh) has already registered the EDPM nodes to their repositories.
 
 ## Run EDPM Ansible
 ```

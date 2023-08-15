@@ -4,8 +4,6 @@ metadata:
   name: openstack-edpm
   namespace: openstack
 spec:
-  configMaps:
-    - nova-libvirt-qemu
   roles:
     edpm-compute:
       # remove repo-setup from services list
