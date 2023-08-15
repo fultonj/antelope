@@ -70,16 +70,19 @@ configuration snippet (so nested VMs can be booted for testing).
 ```
 oc create -f snippets/nova-libvirt-qemu.yaml
 ```
-Update the
+Create a custom version of the
 [nova service](https://github.com/openstack-k8s-operators/dataplane-operator/blob/main/config/services/dataplane_v1beta1_openstackdataplaneservice_nova.yaml)
 which ships with the operator so that it uses the snippet by
-adding it to the `configMaps` list. E.g. replace the shipped version with
-[my version](../crs/services/dataplane_v1beta1_openstackdataplaneservice_nova.yaml)
+adding it to the `configMaps` list. E.g. here is
+[my version](../crs/services/dataplane_v1beta1_openstackdataplaneservice_nova_custom.yaml)
 ```
-oc delete -f \
-  ~/dataplane-operator/config/services/dataplane_v1beta1_openstackdataplaneservice_nova.yaml
-oc create -f services/dataplane_v1beta1_openstackdataplaneservice_nova.yaml
+oc create -f services/dataplane_v1beta1_openstackdataplaneservice_nova_custom.yaml
 ```
+
+As per the NOTE in [dataplane-operator docs](https://openstack-k8s-operators.github.io/dataplane-operator/composable_services/#dataplane-operator-provided-optional-services),
+we cannot redefine a custom version of `nova` service since
+the "default service will overwrite the custom service with the same
+name during role reconciliation".
 
 ### Customize the OpenStackDataPlane CR
 
@@ -92,6 +95,8 @@ kustomize build data_plane/overlay/standard > data_plane.yaml
 The
 [deployment.yaml in the standard overlay](../crs/data_plane/overlay/standard/deployment.yaml)
 updates [dataplane-operator provided services](https://openstack-k8s-operators.github.io/dataplane-operator/composable_services/#dataplane-operator-provided-services) to remove the `repo-setup` service since `EDPM_NODE_REPOS` in [deploy.sh](../scripts/deploy.sh) has already registered the EDPM nodes to their repositories.
+It also replaces the `nova` service with the `nova-custom` service
+which uses the configuration snippet.
 
 ## Run EDPM Ansible
 ```

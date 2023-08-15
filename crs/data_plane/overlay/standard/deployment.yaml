@@ -6,7 +6,7 @@ metadata:
 spec:
   roles:
     edpm-compute:
-      # remove repo-setup from services list
+      # remove repo-setup from services list and use nova-custom instead of nova
       services:
         - configure-network
         - validate-network
@@ -15,4 +15,4 @@ spec:
         - run-os
         - ovn
         - libvirt
-        - nova
+        - nova-custom
