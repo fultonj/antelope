@@ -77,7 +77,7 @@ snippet by adding it to a new `configMaps` list.
 Compare my [example](../crs/services/dataplane_v1beta1_openstackdataplaneservice_nova.yaml)
 to the shipped version.
 ```
-diff -u ~/dataplane-operator/config/services/dataplane_v1beta1_openstackdataplaneservice_nova.yaml dataplane_v1beta1_openstackdataplaneservice_nova.yaml
+diff -u ~/dataplane-operator/config/services/dataplane_v1beta1_openstackdataplaneservice_nova.yaml services/dataplane_v1beta1_openstackdataplaneservice_nova.yaml
 ```
 or simply overwrite the shipped version with mine.
 ```
