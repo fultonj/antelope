@@ -70,18 +70,15 @@ configuration snippet (so nested VMs can be booted for testing).
 ```
 oc create -f snippets/nova-libvirt-qemu.yaml
 ```
-Modify the [nova service](https://github.com/openstack-k8s-operators/dataplane-operator/blob/main/config/services/dataplane_v1beta1_openstackdataplaneservice_nova.yaml),
-which ships with the dataplane-operator, to use the `nova-libvirt-qemu`
-snippet by adding it to a new `configMaps` list.
-
-Compare my [example](../crs/services/dataplane_v1beta1_openstackdataplaneservice_nova.yaml)
-to the shipped version.
+Update the
+[nova service](https://github.com/openstack-k8s-operators/dataplane-operator/blob/main/config/services/dataplane_v1beta1_openstackdataplaneservice_nova.yaml)
+which ships with the operator so that it uses the snippet by
+adding it to the `configMaps` list. E.g. replace the shipped version with
+[my version](../crs/services/dataplane_v1beta1_openstackdataplaneservice_nova.yaml)
 ```
-diff -u ~/dataplane-operator/config/services/dataplane_v1beta1_openstackdataplaneservice_nova.yaml services/dataplane_v1beta1_openstackdataplaneservice_nova.yaml
-```
-or simply overwrite the shipped version with mine.
-```
-oc apply -f services/dataplane_v1beta1_openstackdataplaneservice_nova.yaml
+oc delete -f \
+  ~/dataplane-operator/config/services/dataplane_v1beta1_openstackdataplaneservice_nova.yaml
+oc create -f services/dataplane_v1beta1_openstackdataplaneservice_nova.yaml
 ```
 
 ### Customize the OpenStackDataPlane CR
@@ -124,9 +121,10 @@ be terminated.
 ## Check if the configuration snipet was applied
 
 After the compute node is deployed, use the following to confirm if
-the configuration was applied.
+the configuration snippet was copied to the host.
 ```
 $(./ssh_node.sh)
+ls /var/lib/openstack/config/nova/
 podman exec -ti nova_compute ls -l /etc/nova/nova.conf.d/
 ```
 The above should show a configuration file from the configuration
