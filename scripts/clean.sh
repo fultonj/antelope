@@ -85,6 +85,7 @@ fi
 if [ $PVC -eq 1 ]; then
     pushd ~/install_yamls
     make crc_storage_cleanup
+    make crc_storage_cleanup
     popd
 fi
 
