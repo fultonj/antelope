@@ -70,10 +70,6 @@ configuration snippet (so nested VMs can be booted for testing).
 ```
 oc create -f snippets/libvirt-qemu-nova.yaml
 ```
-The snippet file name needs to end in "nova.conf" or it won't be
-copied from `host:/var/lib/openstack/config/nova` to
-`container:/etc/nova/nova.conf.d/`.
-
 Create a custom version of the
 [nova service](https://github.com/openstack-k8s-operators/dataplane-operator/blob/main/config/services/dataplane_v1beta1_openstackdataplaneservice_nova.yaml)
 which ships with the operator so that it uses the snippet by
@@ -82,7 +78,6 @@ adding it to the `configMaps` list. E.g. here is
 ```
 oc create -f services/dataplane_v1beta1_openstackdataplaneservice_nova_custom.yaml
 ```
-
 As per the NOTE in [dataplane-operator docs](https://openstack-k8s-operators.github.io/dataplane-operator/composable_services/#dataplane-operator-provided-optional-services),
 we cannot redefine a custom version of `nova` service since
 the "default service will overwrite the custom service with the same
