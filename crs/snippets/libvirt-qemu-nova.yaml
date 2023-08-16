@@ -2,8 +2,8 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: nova-libvirt-qemu
+  name: libvirt-qemu-nova
 data:
-  02-nova-libvirt-qemu.conf: |
+  02-libvirt-qemu-nova.conf: |
     [libvirt]
     virt_type = qemu

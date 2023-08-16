@@ -79,3 +79,6 @@ total 4
 -rw-------. 1 nova nova 3804 Aug 16 11:25 01-nova.conf
 [root@edpm-compute-0 ~]# 
 ```
+This is because the snippet file name needs to end in "nova.conf" or
+it won't be copied from `host:/var/lib/openstack/config/nova` to
+`container:/etc/nova/nova.conf.d/`.

@@ -65,11 +65,15 @@ popd
 ### Create a configuration snippet
 
 Create the
-[nova-libvirt-qemu.yaml](../crs/snippets/nova-libvirt-qemu.yaml)
+[libvirt-qemu-nova.yaml](../crs/snippets/libvirt-qemu-nova.yaml)
 configuration snippet (so nested VMs can be booted for testing).
 ```
-oc create -f snippets/nova-libvirt-qemu.yaml
+oc create -f snippets/libvirt-qemu-nova.yaml
 ```
+The snippet file name needs to end in "nova.conf" or it won't be
+copied from `host:/var/lib/openstack/config/nova` to
+`container:/etc/nova/nova.conf.d/`.
+
 Create a custom version of the
 [nova service](https://github.com/openstack-k8s-operators/dataplane-operator/blob/main/config/services/dataplane_v1beta1_openstackdataplaneservice_nova.yaml)
 which ships with the operator so that it uses the snippet by

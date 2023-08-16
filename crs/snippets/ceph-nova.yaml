@@ -2,11 +2,10 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: nova-ceph
+  name: ceph-nova
 data:
-  03-nova-ceph: |
+  03-ceph-nova.conf: |
     [libvirt]
-    virt_type = qemu
     images_type=rbd
     images_rbd_pool=vms
     images_rbd_ceph_conf=/etc/ceph/ceph.conf

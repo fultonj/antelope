@@ -5,7 +5,7 @@ metadata:
 spec:
   label: dataplane-deployment-nova-custom
   configMaps:
-    - nova-libvirt-qemu
+    - libvirt-qemu-nova
   secrets:
     - nova-cell1-compute-config
   role:
