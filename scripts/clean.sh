@@ -2,6 +2,7 @@
 
 EDPM_CR=1
 EDPM_NODE=1
+NOVA_DB=1
 CONTROL=1
 CEPH_CLI=0
 OPERATORS=0
@@ -27,6 +28,32 @@ if [ $EDPM_NODE -eq 1 ]; then
         make edpm_compute_cleanup EDPM_COMPUTE_SUFFIX=$I;
     done
     popd
+fi
+
+if [ $NOVA_DB -eq 1 ]; then
+    # nova_compute pod flapped with
+    #   nova.exception.InvalidConfiguration: No local node identity found,
+    # but this is not our first startup on this host. Refusing to start
+    # after potentially having lost that state!
+    #
+    # Related Codde:
+    #   https://review.opendev.org/q/topic:bp%252Fstable-compute-uuid
+    #
+    # But this should have prevented it
+    #   `make openstack_cleanup`  and `make crc_storage_cleanup`
+    #
+    # Dropping unwanted data to ensure it is clean.
+    echo "Dropping nova DBs containing the following entries:"
+
+    oc exec -it  pod/openstack-cell1-galera-0 -- mysql -uroot -p12345678 -e \
+       "use nova_cell1; select * from services;"
+    oc exec -it  pod/openstack-galera-0 -- mysql -uroot -p12345678 -e \
+       "use nova_cell0; select * from services;"
+
+    oc exec -it  pod/openstack-cell1-galera-0 -- mysql -uroot -p12345678 -e \
+       "drop database nova_cell1;"
+    oc exec -it  pod/openstack-galera-0 -- mysql -uroot -p12345678 -e \
+       "drop database nova_cell0; drop database nova_api;"
 fi
 
 if [ $CONTROL -eq 1 ]; then
