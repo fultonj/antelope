@@ -82,3 +82,14 @@ total 4
 This is because the snippet file name needs to end in "nova.conf" or
 it won't be copied from `host:/var/lib/openstack/config/nova` to
 `container:/etc/nova/nova.conf.d/`.
+
+When I
+[renamed](https://github.com/fultonj/antelope/commit/485bd56ab08cbc9c5bf87291f9cae9b762d25f35)
+the service it worked.
+```
+[root@edpm-compute-0 ~]# podman exec -ti nova_compute ls -l /etc/nova/nova.conf.d/
+total 8
+-rw-------. 1 nova nova 3804 Aug 16 13:45 01-nova.conf
+-rw-------. 1 nova nova   27 Aug 16 13:45 02-libvirt-qemu-nova.conf
+[root@edpm-compute-0 ~]#
+```
