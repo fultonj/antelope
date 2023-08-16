@@ -93,3 +93,8 @@ total 8
 -rw-------. 1 nova nova   27 Aug 16 13:45 02-libvirt-qemu-nova.conf
 [root@edpm-compute-0 ~]#
 ```
+
+The following PR changes the pattern from "*nova.conf" to
+"*nova*.conf".
+
+https://github.com/openstack-k8s-operators/edpm-ansible/pull/282
