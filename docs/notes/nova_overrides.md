@@ -72,3 +72,10 @@ I can see the resultant file has been copied to my compute node.
 virt_type = qemu
 [root@edpm-compute-0 ~]# 
 ```
+However, I do not see the file inside my nova_compute container.
+```
+[root@edpm-compute-0 ~]# podman exec -ti nova_compute ls -l /etc/nova/nova.conf.d/
+total 4
+-rw-------. 1 nova nova 3804 Aug 16 11:25 01-nova.conf
+[root@edpm-compute-0 ~]# 
+```
