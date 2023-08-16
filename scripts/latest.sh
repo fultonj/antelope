@@ -5,6 +5,7 @@ declare -a REPOS=(
     dataplane-operator
     edpm-ansible
 )
+PUSH=1
 GIT_USER=openstack-k8s-operators
 
 for REPO in ${REPOS[@]}; do
@@ -24,6 +25,9 @@ for REPO in ${REPOS[@]}; do
     fi
     # Update my fork from original repo to keep up with their changes
     git pull upstream main
+    if [ $PUSH -eq 1 ]; then
+        git push
+    fi
     git log --oneline --since="1 week ago"
     git show --summary
     popd
