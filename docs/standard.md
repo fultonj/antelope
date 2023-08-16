@@ -52,7 +52,7 @@ Create a `deployment.yaml` file in the base data_plane CR directory.
 ```
 TARGET=$HOME/antelope/crs/data_plane/base/deployment.yaml
 pushd ~/install_yamls
-DATAPLANE_CHRONY_NTP_SERVER=pool.ntp.org \
+DATAPLANE_CHRONY_NTP_SERVER=time.google.com \
     DATAPLANE_TOTAL_NODES=3 \
     DATAPLANE_SINGLE_NODE=false \
     make edpm_deploy_prep

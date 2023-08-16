@@ -40,7 +40,7 @@ I created a CR with with `install_yamls`.
 
 ```
 pushd ~/install_yamls
-DATAPLANE_CHRONY_NTP_SERVER=pool.ntp.org \
+DATAPLANE_CHRONY_NTP_SERVER=time.google.com \
     DATAPLANE_TOTAL_NODES=3 \
     DATAPLANE_SINGLE_NODE=false \
     make edpm_deploy_prep
