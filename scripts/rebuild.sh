@@ -69,3 +69,6 @@ done
 export OS_CLOUD=default
 export OS_PASSWORD=12345678
 openstack endpoint list
+
+# list services in cell1
+oc exec -it  pod/openstack-cell1-galera-0 -- mysql -uroot -p12345678 -e "use nova_cell1; select * from services;"
