@@ -70,5 +70,16 @@ export OS_CLOUD=default
 export OS_PASSWORD=12345678
 openstack endpoint list
 
+echo "Waiting for public and private nova endpoints to be listed in keystone"
+while [[ 1 ]]; do
+    if [[ $(openstack endpoint list -f value | grep nova | wc -l) -eq 2 ]]; then
+        break
+    else
+        echo -n "."
+        sleep 1
+    fi
+done
+
+echo "select * from services in nova_cell1"
 # list services in cell1
 oc exec -it  pod/openstack-cell1-galera-0 -- mysql -uroot -p12345678 -e "use nova_cell1; select * from services;"
