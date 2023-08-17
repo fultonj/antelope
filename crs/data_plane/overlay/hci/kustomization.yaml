@@ -3,5 +3,46 @@ kind: Kustomization
 namespace: openstack
 resources:
 - ../../base/
-patchesStrategicMerge:
-- deployment.yaml
+# Add remaining services now that Ceph is deployed and mount Ceph secret
+patches:
+  - patch: |-
+      - op: replace
+        path: /spec/roles/edpm-compute/services
+        value:
+          - ceph-client
+          - ovn
+          - libvirt
+          - nova-custom-ceph
+      - op: add
+        path: /spec/roles/edpm-compute/nodeTemplate/extraMounts
+        value:
+          - extraVolType: edpm-ansible
+            mounts:
+            - mountPath: /usr/share/ansible/collections/ansible_collections/osp/edpm
+              name: edpm-ansible
+            volumes:
+            - name: edpm-ansible
+              persistentVolumeClaim:
+                claimName: edpm-ansible
+                readOnly: true
+          - extraVolType: Ceph
+            volumes:
+            - name: ceph
+              projected:
+                sources:
+                - secret:
+                    name: ceph-conf-files
+            mounts:
+            - name: ceph
+              mountPath: "/etc/ceph"
+              readOnly: true
+          - extraVolType: Logs
+            mounts:
+            - mountPath: /runner/artifacts
+              name: ansible-logs
+            volumes:
+            - name: ansible-logs
+              persistentVolumeClaim:
+                claimName: ansible-ee-logs
+    target:
+      kind: OpenStackDataPlane
