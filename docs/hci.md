@@ -154,12 +154,10 @@ oc apply -f data.yaml
 popd
 ```
 
-#### Watch Ansible
+An alternative to generating and applying the data.yaml file is to
+`oc apply -k data_plane/overlay/hci/`.
 
-```
-oc get pods -w | grep edpm
-oc logs -f dataplane-deployment-configure-network-edpm-compute-skw2g
-```
+
 
 ## Test
 
