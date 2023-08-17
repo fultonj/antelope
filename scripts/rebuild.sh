@@ -86,4 +86,7 @@ oc exec -it  pod/openstack-cell1-galera-0 -- mysql -uroot -p12345678 -e "use nov
 
 if [[ $(openstack endpoint list -f value | grep glance | wc -l) -eq 0 ]]; then
     echo "WARNING: glance endpoint is missing"
+    oc get pods -n openstack-operators | grep glance
+    oc get pods | grep glance
+    oc get pv --selector provisioned-by=crc-devsetup --no-headers  | grep glance
 fi
