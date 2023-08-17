@@ -100,21 +100,61 @@ contains `extraMounts` and `customServiceConfig` for Glance and Cinder to use Ce
 
 ### Complete configuration of the Data Plane
 
-The [data plane hci overlay](../crs/data_plane/overlay/hci) adds
-contains `extraMounts` and `customServiceConfig` for Nova to use
-Ceph. It also restores the full service list so that the EDPM
-deployment is complete. We also use `sed` to swap in the FSID.
+#### Create a snippet to configure Nova to use Ceph
 
+The [ceph-nova.yaml](../crs/snippets/ceph-nova.yaml) configuration
+snippet contains `[libivirt]` directives so that Nova instances
+will use Ceph RBD.
+
+Modify the snippet to add the Ceph FSID and create it.
 ```
 pushd ~/antelope/crs/
 FSID=$(oc get secret ceph-conf-files -o json | jq -r '.data."ceph.conf"' \
   | base64 -d | grep fsid | sed -e 's/fsid = //' | xargs)
-kustomize build data_plane/overlay/hci | sed "s/_FSID_/${FSID}/" > data.yaml
+sed -i "s/_FSID_/${FSID}/" snippets/ceph-nova.yaml
+oc create -f snippets/ceph-nova.yaml
+popd
+```
+
+Ensure that the
+[libvirt-qemu-nova.yaml](../crs/snippets/libvirt-qemu-nova.yaml)
+snippet has been created (so nested VMs can be booted).
+```
+oc create -f snippets/libvirt-qemu-nova.yaml
+```
+
+Create a custom version of the
+[nova service](https://github.com/openstack-k8s-operators/dataplane-operator/blob/main/config/services/dataplane_v1beta1_openstackdataplaneservice_nova.yaml)
+which ships with the operator so that it uses the snippets by
+adding it to the `configMaps` list. E.g. here is
+[my version (nova-custom-ceph)](../crs/services/dataplane_v1beta1_openstackdataplaneservice_nova_custom_ceph.yaml)
+```
+oc create -f services/dataplane_v1beta1_openstackdataplaneservice_nova_custom_ceph.yaml
+```
+The nova-custom-ceph service uses both snippets. Both contain
+`[libvirt]` directives and Nova will effectively merge them.
+```
+  configMaps:
+    - libvirt-qemu-nova
+    - ceph-nova
+```
+
+#### Trigger the remaining Ansible jobs
+
+The [data plane hci overlay](../crs/data_plane/overlay/hci) adds
+`extraMounts` for the Ceph secret and replaces the `nova` service with
+the `nova-custom-ceph` service which uses the configuration snippet.
+It also restores the full service list so that the EDPM deployment is
+complete.
+
+```
+pushd ~/antelope/crs/
+kustomize build data_plane/overlay/hci > data.yaml
 oc apply -f data.yaml
 popd
 ```
 
-## Watch Ansible
+#### Watch Ansible
 
 ```
 oc get pods -w | grep edpm

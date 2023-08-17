@@ -24,4 +24,4 @@ spec:
         - ceph-client
         - ovn
         - libvirt
-        - nova
+        - nova-custom-ceph
