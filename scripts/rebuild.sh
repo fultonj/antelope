@@ -83,3 +83,7 @@ done
 echo "select * from services in nova_cell1"
 # list services in cell1
 oc exec -it  pod/openstack-cell1-galera-0 -- mysql -uroot -p12345678 -e "use nova_cell1; select * from services;"
+
+if [[ $(openstack endpoint list -f value | grep glance | wc -l) -eq 0 ]]; then
+    echo "WARNING: glance endpoint is missing"
+fi
