@@ -1,0 +1,16 @@
+---
+- rule_name: "110 allow ceph_mon from 172.18.0.0/24"
+  rule:
+    proto: tcp
+    dport: [6789, 3300]
+    source: 172.18.0.0/24
+- rule_name: "111 allow ceph_osd from 172.18.0.0/24"
+  rule:
+    proto: tcp
+    dport: ['6800:7300']
+    source: 172.18.0.0/24
+- rule_name: "113 allow ceph_mgr from 172.18.0.0/24"
+  rule:
+    proto: tcp
+    dport: ['6800:7300']
+    source: 172.18.0.0/24
