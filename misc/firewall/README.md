@@ -49,8 +49,10 @@ If you want to quickly see how a file
 like [ceph-networks.yaml](ceph-networks.yaml)
 will be handled by
 [edpm_nftables](https://github.com/openstack-k8s-operators/edpm-ansible/tree/main/roles/edpm_nftables),
-then one solution is to create a
-[composable service](https://openstack-k8s-operators.github.io/dataplane-operator/composable_services/) like [run_firewall.yaml](run_firewall.yaml).
-and set the `services` list in your DataPlane CR to only
-`run-firewall`.
-
+then shorten the `services` list in your DataPlane CR to only the
+following.
+```
+      services:
+      - configure-os
+      - run-os
+```
