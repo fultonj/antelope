@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
-# Generate a valid looking ceph-conf-files secret CR called
+# Generate a valid ceph-conf-files secret CR which is called
 # ceph_secret_cr.yaml with an arbitrary number of fake ceph
-# clusters. This is useful for generating test data.
+# clusters with multiple cephx key types (RBD, Manila, RGW)
+# per cluster. This is useful for generating test data.
 #
 # Usage:
 #   python ceph_secret_cr.py 
 #   oc create -f ceph_secret_cr.yaml
 #   oc get secret/ceph-conf-files -o json | jq -r '.data."ceph.conf"' | base64 -d
 #   oc get secret/ceph-conf-files -o json | jq -r '.data."ceph2.conf"' | base64 -d
+
+CLUSTERS=2
 
 import base64
 import configparser
@@ -35,19 +38,28 @@ def get_ceph_conf():
     config.write(output_buffer)
     return output_buffer.getvalue()
 
-def get_ceph_key():
+def get_ceph_key(user='openstack'):
     # https://github.com/ceph/ceph-deploy/blob/master/ceph_deploy/new.py#L21
     key = os.urandom(16)
     header = struct.pack("<hiih", 1, int(time.time()), 0, len(key))
-    pools = ['vms', 'volumes', 'images', 'backups']
+    client = 'client.' + str(user)
 
     config = configparser.ConfigParser()
-    config.add_section('client.openstack')
-    config.set('client.openstack', 'key', base64.b64encode(header + key).decode('utf-8'))
-    config.set('client.openstack', 'caps mgr', 'allow *')
-    config.set('client.openstack', 'caps mon', 'profile rbd')
-    config.set('client.openstack', 'caps osd', ', '.join(list(
-        map(lambda x: 'profile rbd pool=' + x, pools))))
+    config.add_section(client)
+    config.set(client, 'key', base64.b64encode(header + key).decode('utf-8'))
+    config.set(client, 'caps mgr', 'allow *')
+    if user == 'openstack':
+        config.set(client, 'caps mon', 'profile rbd')
+        pools = ['vms', 'volumes', 'images', 'backups']
+        config.set(client, 'caps osd', ', '.join(list(
+            map(lambda x: 'profile rbd pool=' + x, pools))))
+    elif user == 'radosgw':
+        config.set(client, 'caps mon', 'allow rw')
+        config.set(client, 'caps osd', 'allow rwx')
+    elif user == 'manila':
+        config.set(client, 'caps mon', "allow r, allow command 'auth del', allow command 'auth caps', allow command 'auth get', allow command 'auth get-or-create'")
+        config.set(client, 'caps osd', 'allow rw')
+        config.set(client, 'caps mds', 'allow *')
 
     output_buffer = io.StringIO()
     config.write(output_buffer)
@@ -55,11 +67,11 @@ def get_ceph_key():
 
 def encode_to_base64(input_string):
     encoded_bytes = base64.b64encode(input_string.encode('utf-8'))
-    encoded_string = encoded_bytes.decode('utf-8')
-    return encoded_string
+    return encoded_bytes.decode('utf-8')
 
 
 if __name__ == "__main__":
+    users = ['openstack', 'radosgw', 'manila']
     yaml_file_path = "ceph_secret_cr.yaml"
     ceph_cr = {
         "apiVersion": "v1",
@@ -71,11 +83,16 @@ if __name__ == "__main__":
         "type": "Opaque",
         "data": {}
     }
-    for ceph in ["", 2]:
-        conf = 'ceph' + str(ceph) + '.conf'
-        keyring = 'ceph' + str(ceph) + '.client.openstack.keyring'
+    cluster_list = [""]
+    for i in range(1, CLUSTERS):
+        cluster_list.append(str(i+1))
+
+    for ceph in cluster_list:
+        conf = 'ceph' + ceph + '.conf'
         ceph_cr['data'][conf] = encode_to_base64(get_ceph_conf())
-        ceph_cr['data'][keyring] = encode_to_base64(get_ceph_key())
+        for user in users:
+            keyring = 'ceph' + ceph + '.client.' + user + '.keyring'
+            ceph_cr['data'][keyring] = encode_to_base64(get_ceph_key(user))
 
     with open(yaml_file_path, 'w') as yaml_file:
         yaml.dump(ceph_cr, yaml_file, default_flow_style=False)
