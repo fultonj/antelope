@@ -47,16 +47,18 @@ def get_ceph_key(user='openstack'):
     config = configparser.ConfigParser()
     config.add_section(client)
     config.set(client, 'key', base64.b64encode(header + key).decode('utf-8'))
-    config.set(client, 'caps mgr', 'allow *')
+    config.set(client, 'caps mgr', 'allow rw')
     if user == 'openstack':
-        config.set(client, 'caps mon', 'profile rbd')
-        pools = ['vms', 'volumes', 'images', 'backups']
-        config.set(client, 'caps osd', ', '.join(list(
-            map(lambda x: 'profile rbd pool=' + x, pools))))
-    elif user == 'radosgw':
+        config.set(client, 'caps mon', 'profile r')
+        pools = ['vms', 'volumes', 'images', 'backups',
+                 'cephfs.cephfs.meta', 'cephfs.cephfs.data']
+        osd = 'allow class-read object_prefix rbd_children, '
+        config.set(client, 'caps osd', osd + ', '.join(list(
+            map(lambda x: 'allow rwx pool=' + x, pools))))
+    elif user == 'radosgw':  # should not be in secret
         config.set(client, 'caps mon', 'allow rw')
         config.set(client, 'caps osd', 'allow rwx')
-    elif user == 'manila':
+    elif user == 'manila':   # should not be in secret
         config.set(client, 'caps mon', "allow r, allow command 'auth del', allow command 'auth caps', allow command 'auth get', allow command 'auth get-or-create'")
         config.set(client, 'caps osd', 'allow rw')
         config.set(client, 'caps mds', 'allow *')
@@ -71,7 +73,7 @@ def encode_to_base64(input_string):
 
 
 if __name__ == "__main__":
-    users = ['openstack', 'radosgw', 'manila']
+    users = ['openstack']
     yaml_file_path = "ceph_secret_cr.yaml"
     ceph_cr = {
         "apiVersion": "v1",
