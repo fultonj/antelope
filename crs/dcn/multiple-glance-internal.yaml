@@ -1,0 +1,38 @@
+apiVersion: core.openstack.org/v1beta1
+kind: OpenStackControlPlane
+metadata:
+  name: openstack-multiple-glance-internal-theory
+  namespace: openstack
+spec:
+  glance:
+    template:
+      customServiceConfig: |
+        [DEFAULT]
+        enabled_backends = default_backend:rbd
+        [glance_store]
+        default_backend = default_backend
+        [default_backend]
+        rbd_store_ceph_conf = /etc/ceph/ceph.conf
+        store_description = "RBD backend"
+        rbd_store_pool = images
+        rbd_store_user = openstack
+      glanceAPIExternal:
+        networkAttachments:
+        - storage
+      # this will not work
+      glanceAPIInternalAZ1:
+        externalEndpoints:
+        - endpoint: internal
+          ipAddressPool: internalapi
+          loadBalancerIPs:
+          - 172.17.0.81
+        networkAttachments:
+        - storage
+      glanceAPIInternalAZ2:
+        externalEndpoints:
+        - endpoint: internal
+          ipAddressPool: internalapi
+          loadBalancerIPs:
+          - 172.17.0.82
+        networkAttachments:
+        - storage
