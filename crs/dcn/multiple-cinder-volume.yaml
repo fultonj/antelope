@@ -1,0 +1,47 @@
+apiVersion: core.openstack.org/v1beta1
+kind: OpenStackControlPlane
+metadata:
+  name: openstack-multiple-cinder-volume
+  namespace: openstack
+spec:
+  cinder:
+    template:
+      databaseInstance: openstack
+      secret: osp-secret
+      cinderAPI:
+        externalEndpoints:
+        - endpoint: internal
+          ipAddressPool: internalapi
+          loadBalancerIPs:
+          - 172.17.0.80
+      cinderBackup:
+        networkAttachments:
+        - storage
+        replicas: 0
+      cinderScheduler:
+        replicas: 1
+      cinderVolumes:
+        cephAZ1:
+          replicas: 1
+          customServiceConfig: |
+            [DEFAULT]
+            enabled_backends=ceph
+            [ceph]
+            rbd_secret_uuid=Fsid1
+            # ...            
+        cephAZ2:
+          replicas: 1
+          customServiceConfig: |
+            [DEFAULT]
+            enabled_backends=ceph
+            [ceph]
+            rbd_secret_uuid=Fsid2
+            # ...            
+        cephAZN:
+          replicas: 1
+          customServiceConfig: |
+            [DEFAULT]
+            enabled_backends=ceph
+            [ceph]
+            rbd_secret_uuid=FsidN
+            # ...            
