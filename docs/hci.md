@@ -63,10 +63,15 @@ export ANSIBLE_REMOTE_USER=root
 export ANSIBLE_SSH_PRIVATE_KEY=~/install_yamls/out/edpm/ansibleee-ssh-key-id_rsa
 export ANSIBLE_HOST_KEY_CHECKING=False
 ```
-Run the playbook to deploy Ceph.
+Link the [ceph_overrides.yml](../misc/ansible/ceph_overrides.yml) from
+the ci-framework.
+```
+ln -s ~/antelope/misc/ansible/ceph_overrides.yml ~/ci-framework/
+```
+Run the playbook with the overrides to deploy Ceph.
 ```
 cd ~/ci-framework/
-ansible-playbook ci_framework/playbooks/ceph.yml
+ansible-playbook ci_framework/playbooks/ceph.yml -e @ceph_overrides.yml
 ```
 Delete the old Ceph secret (if you have one) and create a new one from
 the secret file created by Ansible.
