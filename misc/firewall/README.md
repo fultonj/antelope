@@ -56,3 +56,14 @@ following.
       - configure-os
       - run-os
 ```
+If you want to test a small firewall change (for example
+[PR 317](https://github.com/openstack-k8s-operators/edpm-ansible/pull/317)),
+then you can create a custom service like
+[firewall.yaml](../../crs/services/firewall.yaml) which only
+configures and reloads the firewall and then you can have your service
+test it like this:
+```
+      services:
+      - ceph-hci-pre
+      - firewall
+```
