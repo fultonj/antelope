@@ -1,18 +1,15 @@
 apiVersion: dataplane.openstack.org/v1beta1
-kind: OpenStackDataPlane
+kind: OpenStackDataPlaneNodeSet
 metadata:
   name: openstack-edpm
   namespace: openstack
-spec:
-  roles:
-    edpm-compute:
-      # remove repo-setup from services list and use nova-custom instead of nova
-      services:
-        - configure-network
-        - validate-network
-        - install-os
-        - configure-os
-        - run-os
-        - ovn
-        - libvirt
-        - nova-custom
+spec:  # remove repo-setup from services list and use nova-custom instead of nova
+  services:
+    - configure-network
+    - validate-network
+    - install-os
+    - configure-os
+    - run-os
+    - ovn
+    - libvirt
+    - nova-custom

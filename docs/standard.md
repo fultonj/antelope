@@ -42,7 +42,7 @@ and `edpm-compute-{0,1,2}` will be ready to be configured by Ansible.
 Use [ssh_node.sh](../scripts/ssh_node.sh) for a command to use
 to SSH into `edpm-compute-0`.
 
-## Create an OpenStackDataPlane CR with edpm_deploy_prep
+## Create an OpenStackDataPlaneNodeSet CR with edpm_deploy_prep
 
 I don't use `make edpm_deploy` because I like to have a CR file to
 review and modify before I start the deployment. Thus, I use `make
@@ -83,10 +83,10 @@ we cannot redefine a custom version of `nova` service since
 the "default service will overwrite the custom service with the same
 name during role reconciliation".
 
-### Customize the OpenStackDataPlane CR
+### Customize the OpenStackDataPlaneNodeSet CR
 
 Have [kustomize](https://kustomize.io/) apply changes to the
-OpenStackDataPlane CR:
+OpenStackDataPlaneNodeSet CR:
 ```
 pushd ~/antelope/crs/
 kustomize build data_plane/overlay/standard > data_plane.yaml
@@ -103,14 +103,14 @@ oc create -f data_plane.yaml
 ```
 I then like to use the following to watch the playbooks:
 ```
-oc get pods -w | grep edpm
-oc logs -f dataplane-deployment-configure-network-edpm-compute-skw2g
+oc get pods -w | grep dataplane
+oc logs -f dataplane-deployment-configure-network-standard-openstack-jkwcm
 ```
 
 ### Stop Failing Ansible Jobs
 
 If Ansible fails and you want to tell the dataplane-operator to stop
-spawning Ansible jobs, then delete the `OpenStackDataPlane` CR.
+spawning Ansible jobs, then delete the `OpenStackDataPlaneNodeSet` CR.
 ```
 oc delete -f data_plane.yaml
 ```
@@ -146,7 +146,7 @@ provided by a PVC), a private network and be able to boot a VM.
 
 ## Clean
 
-Delete the `OpenStackDataPlane` CR.
+Delete the `OpenStackDataPlaneNodeSet` CR.
 ```
 oc delete -f data_plane.yaml
 ```
@@ -173,7 +173,7 @@ Other vars can keep their defualts of 0 (though NODES defaults to 2).
   running the control plane should be ready.
 
 - You should now be able to start again from "Create an
-  OpenStackDataPlane CR with edpm_deploy_prep".
+  OpenStackDataPlaneNodeSet CR with edpm_deploy_prep".
 
 ### Clean Everything
 
