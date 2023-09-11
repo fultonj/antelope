@@ -18,8 +18,7 @@ eval $(crc oc-env)
 oc login -u kubeadmin -p 12345678 https://api.crc.testing:6443
 
 if [ $EDPM_CR -eq 1 ]; then
-    oc get openstackdataplane.dataplane.openstack.org -o name | xargs oc delete
-    make edpm_deploy_cleanup
+    oc get openstackdataplanenodeset.dataplane.openstack.org -o name | xargs oc delete
 fi
 
 if [ $EDPM_NODE -eq 1 ]; then
@@ -83,6 +82,16 @@ if [ $CEPH_K8S -eq 1 ]; then
 fi
 
 if [ $PVC -eq 1 ]; then
+    echo -n "Waiting to ensure all Galera pods are have stopped running..."
+    while [[ 1 ]]; do
+        if [[ $(oc get pods 2> /dev/null | grep -i galera | wc -l) -gt 0 ]]; then
+            echo -n "."
+            sleep 1
+        else
+            echo "Galera is not running"
+            break
+        fi
+    done
     pushd ~/install_yamls
     make crc_storage_cleanup
     make crc_storage_cleanup
