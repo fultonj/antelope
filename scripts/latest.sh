@@ -4,6 +4,7 @@ declare -a REPOS=(
     install_yamls
     dataplane-operator
     edpm-ansible
+    ci-framework
 )
 PUSH=1
 GIT_USER=openstack-k8s-operators
