@@ -29,9 +29,17 @@ export OS_PASSWORD=12345678
 
 if [ $OVERVIEW -eq 1 ]; then
    openstack endpoint list
-   openstack hypervisor list
    openstack network agent list
    openstack compute service list
+fi
+
+if [[ $(openstack hypervisor list -f value | wc -l) -eq 0 ]]; then
+    # https://issues.redhat.com/browse/OSPRH-319
+    echo "Attempting to discover Nova hosts"
+    eval $(crc oc-env)
+    oc login -u kubeadmin -p 12345678 https://api.crc.testing:6443
+    oc rsh nova-cell0-conductor-0 nova-manage cell_v2 discover_hosts
+    openstack hypervisor list
 fi
 
 function run_on_mon {
