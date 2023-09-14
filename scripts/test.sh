@@ -35,7 +35,7 @@ if [ $OVERVIEW -eq 1 ]; then
 fi
 
 function run_on_mon {
-    $(bash ssh_node.sh) "cephadm shell -- $1" 2> /dev/null
+    $(bash ssh_node.sh) "sudo cephadm shell -- $1" 2> /dev/null
 }
 
 if [ $CINDER -eq 1 ]; then
@@ -123,7 +123,7 @@ fi
 
 if [ $NOVA_COMPUTE_LOGS -eq 1 ]; then
     SSH_CMD=$(bash ssh_node.sh 1)
-    $SSH_CMD "grep ERROR /var/log/containers/nova/nova-compute.log"
+    $SSH_CMD "sudo grep ERROR /var/log/containers/nova/nova-compute.log"
     $SSH_CMD "date"
 fi
 
@@ -186,7 +186,7 @@ if [ $NOVA_INSTANCE_LOGS -eq 1 ]; then
         echo "edpm-compute-$I"
         echo "~~~"
         SSH_CMD=$(bash ssh_node.sh $I)
-        $SSH_CMD "grep $ID /var/log/containers/nova/nova-compute.log"
+        $SSH_CMD "sudo grep $ID /var/log/containers/nova/nova-compute.log"
         $SSH_CMD "date"
         echo "~~~"
     done
