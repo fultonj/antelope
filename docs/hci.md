@@ -59,7 +59,7 @@ done
 ```
 Configure the Ansible environment to use the SSH key created by `install_yamls`.
 ```
-export ANSIBLE_REMOTE_USER=root
+export ANSIBLE_REMOTE_USER=cloud-admin
 export ANSIBLE_SSH_PRIVATE_KEY=~/install_yamls/out/edpm/ansibleee-ssh-key-id_rsa
 export ANSIBLE_HOST_KEY_CHECKING=False
 ```
