@@ -101,7 +101,6 @@ fi
 
 if [ $CRC -eq 1 ]; then
     pushd ~/install_yamls/devsetup
-    cd devsetup
     make crc_cleanup
     popd
 fi
