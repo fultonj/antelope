@@ -18,6 +18,7 @@ eval $(crc oc-env)
 oc login -u kubeadmin -p 12345678 https://api.crc.testing:6443
 
 if [ $EDPM_CR -eq 1 ]; then
+    oc get openstackdataplanedeployment.dataplane.openstack.org -o name | xargs oc delete
     oc get openstackdataplanenodeset.dataplane.openstack.org -o name | xargs oc delete
 fi
 
