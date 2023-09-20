@@ -14,8 +14,8 @@ patches:
           - configure-network
           - validate-network
           - install-os
-          - configure-os
           - ceph-hci-pre
+          - configure-os
           - run-os
       - op: add
         path: /spec/nodeTemplate/extraMounts
