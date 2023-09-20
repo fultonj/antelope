@@ -150,7 +150,7 @@ The [data plane hci overlay](../crs/data_plane/overlay/hci) adds
 `extraMounts` for the Ceph secret and replaces the `nova` service with
 the `nova-custom-ceph` service which uses the configuration snippet.
 It also restores the full service list so that the EDPM deployment is
-complete.
+complete. Update the node set definition.
 
 ```
 pushd ~/antelope/crs/
@@ -162,7 +162,40 @@ popd
 An alternative to generating and applying the data.yaml file is to
 `oc apply -k data_plane/overlay/hci/`.
 
+The above command will update the defintion of the dataplane node
+set but won't trigger another deployment. It's easy to create another
+deployment CR and have it references the same nodeset however and
+creating the deployment CR will trigger the remaining Ansible tasks.
 
+```
+[fultonj@hamfast crs{main}]$ cat deployment2.yaml
+apiVersion: dataplane.openstack.org/v1beta1
+kind: OpenStackDataPlaneDeployment
+metadata:
+  name: openstack-edpm-2
+  namespace: openstack
+spec:
+  nodeSets:
+  - openstack-edpm
+[fultonj@hamfast crs{main}]$
+```
+
+```
+[fultonj@hamfast crs{main}]$ oc create -f deployment2.yaml
+openstackdataplanedeployment.dataplane.openstack.org/openstack-edpm-2 created
+[fultonj@hamfast crs{main}]$
+```
+
+```
+[fultonj@hamfast ~]$ oc get pods -w | grep dataplane
+dataplane-deployment-configure-os-openstack-edpm-z4lx4   0/1     Completed   0          5h57m
+dataplane-deployment-run-os-openstack-edpm-9z7ns         0/1     Completed   0          5h56m
+dataplane-deployment-ceph-client-openstack-edpm-2-4tg88   0/1     Pending     0          0s
+dataplane-deployment-ceph-client-openstack-edpm-2-4tg88   0/1     Pending     0          0s
+dataplane-deployment-ceph-client-openstack-edpm-2-4tg88   0/1     ContainerCreating   0          0s
+dataplane-deployment-ceph-client-openstack-edpm-2-4tg88   0/1     ContainerCreating   0          3s
+dataplane-deployment-ceph-client-openstack-edpm-2-4tg88   1/1     Running             0          8s
+```
 
 ## Test
 
