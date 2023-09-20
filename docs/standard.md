@@ -152,10 +152,10 @@ oc delete -f data_plane.yaml
 ```
 Another way to do this if you don't have the CR file is.
 ```
-oc delete openstackdataplane.dataplane.openstack.org/standard-openstack-edpm
+oc delete openstackdataplane.dataplane.openstack.org/openstack-edpm
 ```
 Use `oc edit openstackdataplane.dataplane.openstack.org` to determine
-the name if `standard-openstack-edpm` does not match.
+the name if `openstack-edpm` does not match.
 
 Use [clean.sh](../scripts/clean.sh).
 
