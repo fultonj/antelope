@@ -71,7 +71,7 @@ ln -s ~/antelope/misc/ansible/ceph_overrides.yml ~/ci-framework/
 Run the playbook with the overrides to deploy Ceph.
 ```
 cd ~/ci-framework/
-ansible-playbook ci_framework/playbooks/ceph.yml -e @ceph_overrides.yml
+ANSIBLE_GATHERING=implicit ansible-playbook ci_framework/playbooks/ceph.yml -e @ceph_overrides.yml
 ```
 Delete the old Ceph secret (if you have one) and create a new one from
 the secret file created by Ansible.
