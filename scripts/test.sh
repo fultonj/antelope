@@ -17,6 +17,7 @@ FLOAT=0
 SEC=0
 SSH=0
 PET=0
+RGW=0
 
 # node0
 NODES=0
@@ -255,4 +256,34 @@ if [ $PET -eq 1 ]; then
     VOL_ID=$(openstack volume show -f value -c id cirros-volume)
     openstack server create --flavor c1 --volume $VOL_ID --nic net-id=private pet-vm
     openstack server list
+fi
+
+if [ $RGW -eq 1 ]; then
+    echo "Testing the following object-store endpoint"
+    for ID in $(openstack endpoint list -f value | grep object-store | awk {'print $1'}); do
+        openstack endpoint show $ID
+    done
+    # The openstackclient has access to the storage network
+    echo "Attempting to list object continainers from within the openstackclient pod"
+    eval $(crc oc-env)
+    oc login -u kubeadmin -p 12345678 https://api.crc.testing:6443
+    if [[ $? -gt 0 ]]; then
+        echo "Error: Unable to authenticate to OpenShift"
+        exit 1
+    fi
+    oc rsh openstackclient openstack container list
+    COUNT=5
+    echo "Creating $COUNT swift containers and observing the RGW buckets.index increment"
+    for I in $(seq 0 $COUNT); do
+        oc rsh openstackclient openstack container create mydir$I
+        sleep 1
+        run_on_mon "ceph df" | egrep "POOL|rgw"
+    done
+    echo "Deleting the $COUNT swift containers"
+    oc rsh openstackclient openstack container list
+    for I in $(seq 0 $COUNT); do
+        oc rsh openstackclient openstack container delete mydir$I
+    done
+    oc rsh openstackclient openstack container list
+    run_on_mon "ceph df" | egrep "POOL|rgw"
 fi
