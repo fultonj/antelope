@@ -43,7 +43,25 @@ if [ $CRC -eq 1 ]; then
 fi
 
 if [ $ATTACH -eq 1 ]; then
+    echo "Inspecting resolv.conf before and after crc_attach_default_interface"
+    CRC_SSH="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ~/.crc/machines/crc/id_ecdsa core@192.168.130.11"
+    $CRC_SSH "cat /etc/redhat-release"
+
+    # we want this when we are done
+    # nameserver 192.168.130.1
+    # nameserver 192.168.122.1
+
+    $CRC_SSH "cat /etc/resolv.conf"
     make crc_attach_default_interface
+    sleep 2
+    $CRC_SSH "cat /etc/resolv.conf"
+    $CRC_SSH "host api-int.crc.testing"
+
+    # If "make crc_attach_default_interface" breaks the CRC VM's
+    # /etc/resolv.conf so that api-int.crc.testing won't resolve,
+    # then tell Network Manager to not change /etc/resolv.conf
+    # as per https://shorturl.at/boVZ4.
+    # Use 'make crc_attach_default_interface_cleanup' to retry.
 fi
 
 cd ..
