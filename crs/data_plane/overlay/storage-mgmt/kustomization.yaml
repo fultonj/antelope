@@ -1,0 +1,87 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: openstack
+
+resources:
+- ../../base/
+ 
+# Add storage management network and set MTU for it and storage to 9000
+patches:
+  - patch: |-
+      - op: replace
+        path: /spec/nodeTemplate/ansible/ansibleVars/role_networks
+        value:
+          - InternalApi
+          - Storage
+          - StorageMgmt
+          - Tenant
+      - op: replace
+        path: /spec/nodeTemplate/ansible/ansibleVars/networks_lower
+        value:
+          External: external
+          InternalApi: internal_api
+          Tenant: tenant
+          Storage: storage
+          StorageMgmt: storage_mgmt
+      - op: replace
+        path: /spec/nodeTemplate/ansible/ansibleVars/storage_mtu
+        value: 9000
+      - op: add
+        path: /spec/nodeTemplate/ansible/ansibleVars/storage_mgmt_mtu
+        value: 9000
+      - op: add
+        path: /spec/nodeTemplate/ansible/ansibleVars/storage_mgmt_cidr
+        value: "24"
+      - op: add
+        path: /spec/nodeTemplate/ansible/ansibleVars/storage_mgmt_host_routes
+        value: []
+      - op: add
+        path: /spec/nodeTemplate/ansible/ansibleVars/storage_mgmt_vlan_id
+        value: 23
+      - op: replace
+        path: /spec/nodes/edpm-compute-0/networks
+        value:
+          - defaultRoute: true
+            fixedIP: 192.168.122.100
+            name: CtlPlane
+            subnetName: subnet1
+          - name: InternalApi
+            subnetName: subnet1
+          - name: Storage
+            subnetName: subnet1
+          - name: StorageMgmt
+            subnetName: subnet1
+          - name: Tenant
+            subnetName: subnet1
+      - op: replace
+        path: /spec/nodes/edpm-compute-1/networks
+        value:
+          - defaultRoute: true
+            fixedIP: 192.168.122.101
+            name: CtlPlane
+            subnetName: subnet1
+          - name: InternalApi
+            subnetName: subnet1
+          - name: Storage
+            subnetName: subnet1
+          - name: StorageMgmt
+            subnetName: subnet1
+          - name: Tenant
+            subnetName: subnet1
+      - op: replace
+        path: /spec/nodes/edpm-compute-2/networks
+        value:
+          - defaultRoute: true
+            fixedIP: 192.168.122.102
+            name: CtlPlane
+            subnetName: subnet1
+          - name: InternalApi
+            subnetName: subnet1
+          - name: Storage
+            subnetName: subnet1
+          - name: StorageMgmt
+            subnetName: subnet1
+          - name: Tenant
+            subnetName: subnet1
+    target:
+      kind: OpenStackDataPlaneNodeSet

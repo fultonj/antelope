@@ -22,6 +22,23 @@ A `crs/data_plane/base/deployment.yaml` file exists to kustomize.
 
 ## Configure the networks of the EDPM nodes
 
+The [storage-mgmt](../crs/data_plane/overlay/storage-mgmt) kustomize
+overlay adds the storage management network and sets the MTU of both
+the storage and storage management networks to 9000 (jumbo frames).
+Create an updated version of the deployment.yaml kustomize base.
+```
+pushd ~/antelope/crs/
+kustomize build data_plane/overlay/storage-mgmt > deployment.yaml
+```
+Compare the new `deployment.yaml` to the kustomize base target created
+earlier. If the diff looks as expected then replace the original
+target in the base directory so that future kustomizations will
+include the storage management network.
+```
+TARGET=$HOME/antelope/crs/data_plane/base/deployment.yaml
+diff -u $TARGET deployment.yaml
+mv deployment.yaml $TARGET
+```
 Create a data.yaml file with the
 [net-only](../crs/data_plane/overlay/net-only)
 overlay which disables nova and only configures/validates the network
