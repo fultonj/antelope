@@ -18,6 +18,13 @@ NODES=2
 NODE_START=0
 ADOPT=0
 
+if [[ -z /usr/local/bin/yq ]]; then
+    # install yq if it is missing
+    export URL=https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+    sudo wget -qO /usr/local/bin/yq $URL
+    sudo chmod a+x /usr/local/bin/yq
+fi
+
 if [[ ! -d ~/install_yamls ]]; then
     echo "Error: ~/install_yamls is missing"
     exit 1
@@ -67,6 +74,8 @@ if [ $CONTROL -eq 1 ]; then
     TARGET=$HOME/antelope/crs/control_plane/base/deployment.yaml
     DBSERVICE=galera make openstack_deploy_prep
     kustomize build out/openstack/openstack/cr > $TARGET
+    # disable swift
+    /usr/local/bin/yq -i '(.spec.swift.enabled)=false' $TARGET
     oc create -f $TARGET
 
     # "make netconfig_deploy" was missing and presented as:
