@@ -77,7 +77,7 @@ if [ $DEPS -eq 1 ]; then
 fi
 
 if [ $OPER -eq 1 ]; then
-    make BMO_SETUP=false openstack
+    make NETWORK_MTU=9000 BMO_SETUP=false openstack
 fi
 
 if [ $CONTROL -eq 1 ]; then
@@ -88,20 +88,27 @@ if [ $CONTROL -eq 1 ]; then
         exit 1
     fi
     oc get pods -n openstack-operators | grep controller
+    if [[ $(oc get pods -n openstack-operators | grep controller | wc -l) -eq 0 ]]; then
+        echo "Error: no controllers running in openstack-operators namespace"
+        exit 1
+    fi
+    # Set the MTU for the Node Network Policy (NNCP), which configures
+    # the bridges on OCP worker(s). I.e. Cutomize the NetConfig CR
+    # (usually made by "make openstack_deploy") to set MTU=9000 for
+    # the storagemgmt and storage networks.
+    make netconfig_deploy_prep
+    oc kustomize out/openstack/infra/cr > /tmp/netconfig.yaml
+    yq -i '(.spec.networks[3].mtu)=9000' /tmp/netconfig.yaml
+    yq -i '(.spec.networks[4].mtu)=9000' /tmp/netconfig.yaml
+
     # Save a copy of the base dataplane CR in my CRs directory
     TARGET=$HOME/antelope/crs/control_plane/base/deployment.yaml
     DBSERVICE=galera make openstack_deploy_prep
     kustomize build out/openstack/openstack/cr > $TARGET
     # disable swift
     /usr/local/bin/yq -i '(.spec.swift.enabled)=false' $TARGET
-    oc create -f $TARGET
-
-    # "make netconfig_deploy" was missing and presented as:
-    # AnsibleUndefinedVariable: No variable found with this name: internal_api_mtu
-    # openstack_deploy does both openstack_deploy_prep and netconfig_deploy
-    # https://github.com/openstack-k8s-operators/install_yamls/blob/
-    # /b05c31abc27f4cc85dac50c4c6cc0ffe3de55ec0/Makefile#L533
-    make netconfig_deploy
+    # The following will implicitly call 'make netconfig_deploy'
+    NETCONFIG_CR=/tmp/netconfig.yaml OPENSTACK_CR=$TARGET make openstack_deploy
 fi
 
 cd devsetup
