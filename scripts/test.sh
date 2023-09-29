@@ -34,15 +34,6 @@ if [ $OVERVIEW -eq 1 ]; then
    openstack compute service list
 fi
 
-if [[ $(openstack hypervisor list -f value | wc -l) -eq 0 ]]; then
-    # https://issues.redhat.com/browse/OSPRH-319
-    echo "Attempting to discover Nova hosts"
-    eval $(crc oc-env)
-    oc login -u kubeadmin -p 12345678 https://api.crc.testing:6443
-    oc rsh nova-cell0-conductor-0 nova-manage cell_v2 discover_hosts
-    openstack hypervisor list
-fi
-
 function run_on_mon {
     $(bash ssh_node.sh) "sudo cephadm shell -- $1" 2> /dev/null
 }
@@ -142,6 +133,18 @@ if [ $PRINET -eq 1 ]; then
 fi
 
 if [ $VM -eq 1 ]; then
+    if [[ $(openstack hypervisor list -f value | wc -l) -eq 0 ]]; then
+        # https://issues.redhat.com/browse/OSPRH-319
+        echo "Attempting to discover Nova hosts"
+        eval $(crc oc-env)
+        oc login -u kubeadmin -p 12345678 https://api.crc.testing:6443
+        oc rsh nova-cell0-conductor-0 nova-manage cell_v2 discover_hosts
+        openstack hypervisor list
+    fi
+    if [[ $(openstack hypervisor list -f value | wc -l) -eq 0 ]]; then
+        echo "'openstack hypervisor list' empty after 'nova-manage cell_v2 discover_hosts'"
+        exit 1
+    fi
     FLAV_ID=$(openstack flavor show c1 -f value -c id)
     if [[ -z $FLAV_ID ]]; then
         openstack flavor create c1 --vcpus 1 --ram 256
