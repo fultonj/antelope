@@ -42,6 +42,9 @@ and `edpm-compute-{0,1,2}` will be ready to be configured by Ansible.
 Use [ssh_node.sh](../scripts/ssh_node.sh) for a command to use
 to SSH into `edpm-compute-0`.
 
+[deploy.sh](../scripts/deploy.sh) assumes [jumbo frames](notes/mtu.md)
+are enabled on the hypervisor.
+
 ## Create an OpenStackDataPlaneNodeSet CR with edpm_deploy_prep
 
 I don't use `make edpm_deploy` because I like to have a CR file to
