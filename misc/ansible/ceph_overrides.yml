@@ -1,3 +1,4 @@
 ---
 storage_network_range: 172.18.0.0/24
+storage_mgmt_network_range: 172.20.0.0/24
 cifmw_cephadm_default_container: true
