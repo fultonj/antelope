@@ -264,9 +264,15 @@ fi
 
 if [ $RGW -eq 1 ]; then
     echo "Testing the following object-store endpoint"
+    RGW_ENDPOINTS=0
     for ID in $(openstack endpoint list -f value | grep object-store | awk {'print $1'}); do
         openstack endpoint show $ID
+        RGW_ENDPOINTS=$[$RGW_ENDPOINTS +1]
     done
+    if [[ $RGW_ENDPOINTS -eq 0 ]]; then
+        echo "No RGW endpoints found. Did you run rgw.sh?"
+        exit 1
+    fi
     # The openstackclient has access to the storage network
     echo "Attempting to list object continainers from within the openstackclient pod"
     eval $(crc oc-env)
