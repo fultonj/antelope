@@ -15,7 +15,7 @@ conventions.
 
 ## Assumptions
 
-The [standard](standard.md) deploy has used to verify a working
+The [standard](standard.md) deploy was used to verify a working
 environment and [rebuild.sh](../scripts/rebuild.sh) was used to
 rebuild with registered edpm nodes and a working control plane.
 A `crs/data_plane/base/deployment.yaml` file exists to kustomize.
@@ -58,9 +58,8 @@ which can run Ceph.
 ## Install Ceph on EDPM nodes
 
 Use the
-[ceph.yml](https://github.com/openstack-k8s-operators/ci-framework/blob/main/ci_framework/playbooks/ceph.yml)
-
-playbook from the
+[ceph.yml](https://github.com/openstack-k8s-operators/ci-framework/blob/main/ci_framework/playbooks/ceph.yml) playbook
+from the
 [CI Framework](https://github.com/openstack-k8s-operators/ci-framework)
 as described in
 [cifmw_cephadm README](https://github.com/openstack-k8s-operators/ci-framework/blob/main/ci_framework/roles/cifmw_cephadm/README.md).
@@ -101,9 +100,9 @@ secret can be used to access it.
 
 ## Configure OpenStack to use the collocated Ceph server
 
-### Update the Control Plane to use Ceph
+### Update the Control Plane to use Ceph RBD
 
-Use the [data plane ceph overlay](../crs/control_plane/overlay/ceph)
+Use the [control plane ceph overlay](../crs/control_plane/overlay/ceph)
 with kustomize and `sed` (to swap in the correct FSID) to update the
 existing control plane.
 
@@ -119,6 +118,18 @@ popd
 The [deployment.yaml in the control plane ceph overlay](../crs/control_plane/overlay/ceph/deployment.yaml)
 contains `extraMounts` and `customServiceConfig` for Glance and Cinder to use Ceph which are applied via
 [patchesStrategicMerge](https://kubectl.docs.kubernetes.io/references/kustomize/builtins/#_patchesstrategicmerge_).
+
+### Update the Control Plane to use CephFS with Manila
+
+Use the [control plane manila overlay](../crs/control_plane/overlay/manila)
+with kustomize to update the existing control plane to include manila.
+
+```
+pushd ~/antelope/crs/
+kustomize build control_plane/overlay/manila > control.yaml
+oc apply -f control.yaml
+popd
+```
 
 ### Complete configuration of the Data Plane
 
