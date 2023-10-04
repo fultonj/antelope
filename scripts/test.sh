@@ -18,6 +18,7 @@ SEC=0
 SSH=0
 PET=0
 RGW=0
+MANILA=0
 
 # node0
 NODES=0
@@ -289,4 +290,30 @@ if [ $RGW -eq 1 ]; then
     done
     oc rsh openstackclient openstack container list
     run_on_mon "ceph df" | egrep "POOL|rgw"
+fi
+
+if [ $MANILA -eq 1 ]; then
+    echo "openstack share service list"
+    oc rsh openstackclient openstack share service list
+    echo "openstack share pool list"
+    oc rsh openstackclient openstack share pool list
+    SHARE_ID=$(oc rsh openstackclient openstack share list -f value -c ID | tr -d "[:space:]")
+    if [[ -z $SHARE_ID ]]; then
+        echo "Creating CephFS share"
+        oc rsh openstackclient openstack share type create default false
+        oc rsh openstackclient openstack share create cephfs 1
+        SHARE_ID=$(oc rsh openstackclient openstack share list -f value -c ID | tr -d "[:space:]")
+    else
+        echo "CephFS share ID is $SHARE_ID"
+    fi
+    echo "Getting subvolume ID from Ceph with 'ceph fs subvolume ls cephfs'"
+    SUB_VOL_ID=$(echo $(run_on_mon "ceph fs subvolume ls cephfs") | jq -r '.[0].name')
+    if [[ -z $SUB_VOL_ID ]]; then
+        echo "Empty output from 'ceph fs subvolume ls cephfs'"
+        exit 1
+    else
+        echo "Subvolume ID is $SUB_VOL_ID"
+    fi
+    echo -e "\nConfirming that share ID has subvolume ID\n"
+    oc rsh openstackclient openstack share show $SHARE_ID | grep $SUB_VOL_ID
 fi
