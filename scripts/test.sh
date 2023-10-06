@@ -2,9 +2,12 @@
 
 OVERVIEW=0
 CEPH=0
-CINDER=0
 GLANCE=1
+GLANCE_DEL=0
+CONV=0
 RMIMG=1
+CINDER=0
+VOL_FROM_IMAGE=0
 NOVA_CONTROL_LOGS=0
 NOVA_COMPUTE_LOGS=0
 PRINET=1
@@ -23,8 +26,10 @@ MANILA=0
 # node0
 NODES=0
 
+IMG_NAME=cirros
 VOL_NAME=vol1
 VM_NAME=vm1
+VOL_IMG_NAME="${VOL_NAME}-${IMG_NAME}"
 
 export OS_CLOUD=default
 export OS_PASSWORD=12345678
@@ -39,20 +44,6 @@ function run_on_mon {
     $(bash ssh_node.sh) "sudo cephadm shell -- $1" 2> /dev/null
 }
 
-if [ $CINDER -eq 1 ]; then
-    echo " --------- Ceph cinder volumes pool --------- "
-    run_on_mon "rbd -p volumes ls -l"
-    openstack volume list
-
-    echo "Creating 1 GB Cinder volume"
-    openstack volume create --size 1 $VOL_NAME
-    sleep 10
-
-    echo "Listing Cinder Ceph Pool and Volume List"
-    openstack volume list
-    run_on_mon "rbd -p volumes ls -l"
-fi
-
 if [ $GLANCE -eq 1 ]; then
     # make sure the glance HTTP service is available
     GLANCE_ENDPOINT=$(openstack endpoint list -f value -c "Service Name" -c "Interface" -c "URL" | grep glance | grep public | awk {'print $3'})
@@ -61,7 +52,15 @@ if [ $GLANCE -eq 1 ]; then
         curl -s $GLANCE_ENDPOINT
         exit 1
     fi
-
+    if [ $GLANCE_DEL -eq 1 ]; then
+        # clean up previoius image and volume from image to test again
+        for VOL in $(openstack volume list -c Name -f value | grep $VOL_IMG_NAME); do
+            openstack volume delete $VOL
+        done
+        for IMG in $(openstack image list -c Name -f value | grep $IMG_NAME); do
+            openstack image delete $IMG
+        done
+    fi
     IMG=cirros-0.5.2-x86_64-disk.img
     URL=http://download.cirros-cloud.net/0.5.2/$IMG
     RAW=$(echo $IMG | sed s/img/raw/g)
@@ -77,15 +76,15 @@ if [ $GLANCE -eq 1 ]; then
 	qemu-img convert -f qcow2 -O raw $IMG $RAW
     fi
     openstack image list
-    if [ $CEPH -eq 1 ]; then
+    if [ $CONV -eq 1 ]; then
         echo " --------- Ceph images pool --------- "
         run_on_mon "rbd -p images ls -l"
 	echo "Importing $RAW image into Glance in format raw"
-	openstack image create cirros --disk-format=raw --container-format=bare < $RAW
+	openstack image create $IMG_NAME --disk-format=raw --container-format=bare < $RAW
     else
         openstack image list
 	echo "Importing $IMG image into Glance in format qcow2"
-	openstack image create cirros --disk-format=qcow2 --container-format=bare < $IMG
+	openstack image create $IMG_NAME --disk-format=qcow2 --container-format=bare < $IMG
     fi
     if [ ! $? -eq 0 ]; then 
         echo "Could not import image. Aborting"; 
@@ -98,12 +97,30 @@ if [ $GLANCE -eq 1 ]; then
     openstack image list
     if [ $CEPH -eq 1 ]; then
         # https://bugzilla.redhat.com/show_bug.cgi?id=1672680
-        GLANCE_ID=$(openstack image show cirros -f value -c id)
+        GLANCE_ID=$(openstack image show $IMG_NAME -f value -c id)
         openstack image set $GLANCE_ID --property hw_disk_bus=scsi
     fi
     if [ $RMIMG -eq 1 ]; then
         rm -f cirros-0.5.2-x86_64-disk.*
     fi
+fi
+
+if [ $CINDER -eq 1 ]; then
+    echo " --------- Ceph cinder volumes pool --------- "
+    run_on_mon "rbd -p volumes ls -l"
+    openstack volume list
+    if [ $VOL_FROM_IMAGE -eq 1 ]; then
+        echo "Creating 8 GB Cinder volume from $IMG_NAME"
+        GLANCE_ID=$(openstack image show $IMG_NAME -f value -c id)
+        openstack volume create --size 8 $VOL_IMG_NAME --image $GLANCE_ID
+    else
+        echo "Creating empty 1 GB Cinder volume"
+        openstack volume create --size 1 $VOL_NAME
+    fi
+    sleep 5
+    echo "Listing Cinder Ceph Pool and Volume List"
+    openstack volume list
+    run_on_mon "rbd -p volumes ls -l"
 fi
 
 if [ $NOVA_CONTROL_LOGS -eq 1 ]; then
