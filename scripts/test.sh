@@ -1,17 +1,17 @@
 #!/bin/bash
 
 OVERVIEW=0
-CEPH=0
+CEPH=1
 GLANCE=1
-GLANCE_DEL=0
-CONV=0
-RMIMG=1
-CINDER=0
-VOL_FROM_IMAGE=0
+GLANCE_DEL=1
+IMPORT_RAW=0
+RMIMG=0
+CINDER=1
+VOL_FROM_IMAGE=1
 NOVA_CONTROL_LOGS=0
 NOVA_COMPUTE_LOGS=0
-PRINET=1
-VM=1
+PRINET=0
+VM=0
 CONSOLE=0
 VOL_ATTACH=0
 NOVA_INSTANCE_LOGS=0
@@ -69,22 +69,29 @@ if [ $GLANCE -eq 1 ]; then
 	    echo "Could not find qemu image $IMG; downloading a copy."
 	    curl -L -# $URL > $IMG
 	fi
-	echo "Could not find raw image $RAW; converting."
-        if [[ ! -e /bin/qemu-img ]]; then
-            sudo dnf install qemu-img -y
+        if [ $IMPORT_RAW -eq 1 ]; then
+	    echo "Could not find raw image $RAW; converting."
+            if [[ ! -e /bin/qemu-img ]]; then
+                sudo dnf install qemu-img -y
+            fi
+	    qemu-img convert -f qcow2 -O raw $IMG $RAW
         fi
-	qemu-img convert -f qcow2 -O raw $IMG $RAW
     fi
     openstack image list
-    if [ $CONV -eq 1 ]; then
+    if [ $CEPH -eq 1 ]; then
         echo " --------- Ceph images pool --------- "
         run_on_mon "rbd -p images ls -l"
-	echo "Importing $RAW image into Glance in format raw"
-	openstack image create $IMG_NAME --disk-format=raw --container-format=bare < $RAW
+        if [ $IMPORT_RAW -eq 1 ]; then
+	    echo "Importing $RAW image into Glance in format raw"
+	    openstack image create $IMG_NAME --container-format bare --disk-format raw < $RAW
+        else
+            echo "Importing $IMG image into Glance in format qcow2 to test Glance image conversion"
+            openstack image create $IMG_NAME --container-format bare --disk-format raw --file $IMG --import
+            sleep 3
+        fi
     else
-        openstack image list
 	echo "Importing $IMG image into Glance in format qcow2"
-	openstack image create $IMG_NAME --disk-format=qcow2 --container-format=bare < $IMG
+        openstack image create $IMG_NAME --container-format bare --disk-format qcow2 < $IMG
     fi
     if [ ! $? -eq 0 ]; then 
         echo "Could not import image. Aborting"; 
