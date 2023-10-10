@@ -100,7 +100,7 @@ secret can be used to access it.
 
 ## Configure OpenStack to use the collocated Ceph server
 
-### Update the Control Plane to use Ceph RBD
+### Update the Control Plane to use Ceph
 
 Create a PVC to host a staging area for [Glance image conversion](https://github.com/openstack-k8s-operators/glance-operator/tree/main/config/samples/import_plugins#enable-image-conversion-plugin).
 ```
@@ -121,7 +121,8 @@ popd
 ```
 
 The [deployment.yaml in the control plane ceph overlay](../crs/control_plane/overlay/ceph/deployment.yaml)
-contains `extraMounts` and `customServiceConfig` for Glance and Cinder to use Ceph which are applied via
+contains `extraMounts` and `customServiceConfig` for Glance and Cinder
+to use Ceph RBD and Manila to use CephFS which are applied via
 [patchesStrategicMerge](https://kubectl.docs.kubernetes.io/references/kustomize/builtins/#_patchesstrategicmerge_).
 
 It also configures Glance to use image conversion so that qcow2 images
@@ -132,18 +133,6 @@ their derivative storage objects in Ceph more efficiently using COW.
 The resultant `customServiceConfig` should be visible in a secret.
 ```
 oc get secret glance-config-data -o json | jq -r '.data."01-config.conf"' | base64 -d
-```
-
-### Update the Control Plane to use CephFS with Manila
-
-Use the [control plane manila overlay](../crs/control_plane/overlay/manila)
-with kustomize to update the existing control plane to include manila.
-
-```
-pushd ~/antelope/crs/
-kustomize build control_plane/overlay/manila > control.yaml
-oc apply -f control.yaml
-popd
 ```
 
 ### Complete configuration of the Data Plane
