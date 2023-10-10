@@ -84,26 +84,18 @@ persistentvolumeclaim/edpm-ansible created
 ```
 Update a CR to use the extraVol
 
-```diff
-diff --git a/crs/data_plane/overlay/standard/deployment.yaml b/crs/data_plane/overlay/standard/deployment.yaml
-index 037ba43..936000e 100644
---- a/crs/data_plane/overlay/standard/deployment.yaml
-+++ b/crs/data_plane/overlay/standard/deployment.yaml
-@@ -7,6 +7,16 @@ spec:
-   roles:
-     edpm-compute:
-       nodeTemplate:
-+        extraMounts:
-+        - extraVolType: edpm-ansible
-+          mounts:
-+          - mountPath: /usr/share/ansible/collections/ansible_collections/osp/edpm
-+            name: edpm-ansible
-+          volumes:
-+          - name: edpm-ansible
-+            persistentVolumeClaim:
-+              claimName: edpm-ansible
-+              readOnly: true
-         nova:
-           customServiceConfig: |
-             [libvirt]
+```yaml
+kind: OpenStackDataPlaneNodeSet
+spec:
+  nodeTemplate:
+    extraMounts:
+    - extraVolType: edpm-ansible
+      mounts:
+      - mountPath: /usr/share/ansible/collections/ansible_collections/osp/edpm
+        name: edpm-ansible
+      volumes:
+      - name: edpm-ansible
+        persistentVolumeClaim:
+          claimName: edpm-ansible
+          readOnly: true
 ```
