@@ -8,7 +8,6 @@ DEPS=${DEPS:-"0"}
 OPER=${OPER:-"0"}
 CONTROL=${CONTROL:-"0"}
 EDPM_NODE=${EDPM_NODE:-"0"}
-EDPM_NODE_REPOS=${EDPM_NODE_REPOS:-"0"}
 EDPM_SVCS=${EDPM_SVCS:-"0"}
 EDPM_DEPLOY_PREP=${EDPM_DEPLOY_PREP:-"0"}
 EDPM_DEPLOY_STANDARD=${EDPM_DEPLOY_STANDARD:-"0"}
@@ -121,12 +120,6 @@ if [ $EDPM_NODE -eq 1 ]; then
             RAM=8
         fi
         make edpm_compute EDPM_COMPUTE_SUFFIX=$I EDPM_COMPUTE_VCPUS=8 EDPM_COMPUTE_RAM=$RAM
-    done
-fi
-
-if [ $EDPM_NODE_REPOS -eq 1 ]; then
-    for I in $(seq $NODE_START $NODES); do
-        make edpm_compute_repos EDPM_COMPUTE_SUFFIX=$I;
     done
 fi
 

@@ -3,8 +3,9 @@ kind: OpenStackDataPlaneNodeSet
 metadata:
   name: openstack-edpm
   namespace: openstack
-spec:  # remove repo-setup from services list and use nova-custom instead of nova
+spec:  # use nova-custom instead of nova
   services:
+    - repo-setup
     - configure-network
     - validate-network
     - install-os
