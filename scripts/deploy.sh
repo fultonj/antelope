@@ -8,9 +8,7 @@ DEPS=${DEPS:-"0"}
 OPER=${OPER:-"0"}
 CONTROL=${CONTROL:-"0"}
 EDPM_NODE=${EDPM_NODE:-"0"}
-EDPM_SVCS=${EDPM_SVCS:-"0"}
 EDPM_DEPLOY_PREP=${EDPM_DEPLOY_PREP:-"0"}
-EDPM_DEPLOY_STANDARD=${EDPM_DEPLOY_STANDARD:-"0"}
 
 # node0 node1 node2
 NODES=2
@@ -125,14 +123,6 @@ fi
 
 popd # out of install_yamls
 
-if [ $EDPM_SVCS -eq 1 ]; then
-    pushd ~/dataplane-operator/config/services
-    for F in $(ls *.yaml); do
-	oc create -f $F
-    done
-    popd
-fi
-
 if [ $EDPM_DEPLOY_PREP -eq 1 ]; then
     # Create base NodeSet for future data_plane CR kustomizations
     TARGET=$HOME/antelope/crs/data_plane/base/deployment.yaml
@@ -151,18 +141,5 @@ if [ $EDPM_DEPLOY_PREP -eq 1 ]; then
     diff -u $TARGET dataplane-1.yaml
     mv dataplane-1.yaml $TARGET
     rm dataplane-0.yaml
-    popd
-fi
-
-if [ $EDPM_DEPLOY_STANDARD -eq 1 ]; then
-    eval $(crc oc-env)
-    oc login -u kubeadmin -p 12345678 https://api.crc.testing:6443
-    if [[ $? -gt 0 ]]; then
-        echo "Error: Unable to authenticate to OpenShift"
-        exit 1
-    fi
-    pushd ~/antelope/crs/
-    kustomize build data_plane/overlay/standard > data_plane.yaml
-    oc create -f data_plane.yaml
     popd
 fi
