@@ -58,6 +58,11 @@ pushd ~/antelope/crs/
 kustomize build data_plane/overlay/hci-pre-ceph > data.yaml
 oc create -f data.yaml
 ```
+Ensure the PVC which provides ansibleee extra mount exists.
+E.g. [edpm-ansible-storage.yaml](../crs/pvcs/edpm-ansible-storage.yaml).
+```
+oc create -f pvcs/edpm-ansible-storage.yaml
+```
 Deploy the data plane with the modified service list.
 ```
 oc create -f deployments/deployment-pre-ceph.yaml

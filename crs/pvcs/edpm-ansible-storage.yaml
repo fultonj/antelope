@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: edpm-ansible
+spec:
+  capacity:
+    storage: 1Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadOnlyMany
+  # IMPORTANT! The persistentVolumeReclaimPolicy must be "Retain" or else
+  # your code will be deleted when the volume is reclaimed!
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: edpm-ansible
+  mountOptions:
+    - nfsvers=4.1
+  nfs:
+    path: /home/fultonj/edpm-ansible
+    server: 192.168.130.1
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: edpm-ansible
+spec:
+  storageClassName: edpm-ansible
+  accessModes:
+    - ReadOnlyMany
+  resources:
+    requests:
+      storage: 1Gi
