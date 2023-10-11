@@ -20,6 +20,34 @@ environment and [rebuild.sh](../scripts/rebuild.sh) was used to
 rebuild with registered edpm nodes and a working control plane.
 A `crs/data_plane/base/deployment.yaml` file exists to kustomize.
 
+## Process Overview
+
+1. Create a OpenStackDataPlaneNodeSet
+2. Create a [pre-ceph ansible deployment](../crs/deployments/deployment-pre-ceph.yaml)
+   to install packages and configure the netwowrk, NTP and firewall on EDPM nodes
+3. Deploy Ceph and export Ceph secrets
+4. Update the OpenStackDataPlaneNodeSet with kustomize to mount Ceph secrets
+5. Create a [post-ceph ansible deployment](../crs/deployments/deployment-post-ceph.yaml)
+   to complete configuration of EDPM nodes as Nova computes
+
+### Separate NodeSet and Deployment CRs
+
+The single target file `crs/data_plane/base/deployment.yaml` generated
+by [install_yamls](https://github.com/openstack-k8s-operators/install_yamls)
+contains two yaml documents: one with a
+[NodeSet](https://openstack-k8s-operators.github.io/dataplane-operator/openstack_dataplanenodeset)
+and one with a
+[Deployment](https://openstack-k8s-operators.github.io/dataplane-operator/openstack_dataplanedeployment).
+Split the documents and keep only the NodeSet as the new target.
+
+```
+TARGET=$HOME/antelope/crs/data_plane/base/deployment.yaml
+csplit --elide-empty-files -f dataplane- -b %d.yaml $TARGET "/^---$/" "{*}"
+diff -u $TARGET dataplane-1.yaml
+mv dataplane-1.yaml $TARGET
+rm dataplane-0.yaml
+```
+
 ## Configure the networks of the EDPM nodes
 
 The [storage-mgmt](../crs/data_plane/overlay/storage-mgmt) kustomize
@@ -40,20 +68,22 @@ diff -u $TARGET deployment.yaml
 mv deployment.yaml $TARGET
 ```
 Create a data.yaml file with the
-[net-only](../crs/data_plane/overlay/net-only)
-overlay which disables nova and only configures/validates the network
-and puts directives in place to open the firewall for Ceph
-by shortening the services list.
+[hci-pre-ceph](../crs/data_plane/overlay/hci-pre-ceph)
+which applies the extra mount described in
+[Testing with ansibleee](https://openstack-k8s-operators.github.io/edpm-ansible/testing_with_ansibleee.html).
 ```
 pushd ~/antelope/crs/
-kustomize build data_plane/overlay/net-only > data.yaml
-```
-Deploy the data plane.
-```
+kustomize build data_plane/overlay/hci-pre-ceph > data.yaml
 oc create -f data.yaml
 ```
-You should now have three EDPM nodes configured with network isolation
-which can run Ceph.
+Deploy the data plane with the modified service list.
+```
+oc create -f deployments/deployment-pre-ceph.yaml
+```
+Use `oc get pods | grep dataplane` to observe the ansible jobs
+deploying each service in the `servicesOverride` list. When the jobs
+are finished you should have three EDPM nodes configured with network
+isolation which can run Ceph.
 
 ## Install Ceph on EDPM nodes
 
@@ -159,7 +189,6 @@ snippet has been created (so nested VMs can be booted).
 ```
 oc create -f snippets/libvirt-qemu-nova.yaml
 ```
-
 Create a custom version of the
 [nova service](https://github.com/openstack-k8s-operators/dataplane-operator/blob/main/config/services/dataplane_v1beta1_openstackdataplaneservice_nova.yaml)
 which ships with the operator so that it uses the snippets by
@@ -175,59 +204,35 @@ The nova-custom-ceph service uses both snippets. Both contain
     - libvirt-qemu-nova
     - ceph-nova
 ```
+#### Customize the OpenStackDataPlaneNodeSet
 
-#### Trigger the remaining Ansible jobs
+The [data plane hci-post-ceph overlay](../crs/data_plane/overlay/hci-post-ceph)
+adds `extraMounts` for the Ceph secret.
 
-The [data plane hci overlay](../crs/data_plane/overlay/hci) adds
-`extraMounts` for the Ceph secret and replaces the `nova` service with
-the `nova-custom-ceph` service which uses the configuration snippet.
-It also restores the full service list so that the EDPM deployment is
-complete. Update the node set definition.
-
+Update the node set definition.
 ```
 pushd ~/antelope/crs/
-kustomize build data_plane/overlay/hci > data.yaml
+kustomize build data_plane/overlay/hci-post-ceph > data.yaml
 oc apply -f data.yaml
 popd
 ```
-
 An alternative to generating and applying the data.yaml file is to
-`oc apply -k data_plane/overlay/hci/`.
+`oc apply -k data_plane/overlay/hci-post-ceph/`.
 
-The above command will update the defintion of the dataplane node
-set but won't trigger another deployment. It's easy to create another
-deployment CR and have it references the same nodeset however and
-creating the deployment CR will trigger the remaining Ansible tasks.
+#### Trigger the remaining Ansible jobs
 
+The
+[post-ceph ansible deployment](../crs/deployments/deployment-post-ceph.yaml)
+contains the list of services to be configured after Ceph has been
+deployed including the `nova-custom-ceph` service which uses the
+configuration snippet from the previous step.
 ```
-[fultonj@hamfast crs{main}]$ cat deployment2.yaml
-apiVersion: dataplane.openstack.org/v1beta1
-kind: OpenStackDataPlaneDeployment
-metadata:
-  name: openstack-edpm-2
-  namespace: openstack
-spec:
-  nodeSets:
-  - openstack-edpm
-[fultonj@hamfast crs{main}]$
+oc create -f deployments/deployment-post-ceph.yaml
 ```
-
-```
-[fultonj@hamfast crs{main}]$ oc create -f deployment2.yaml
-openstackdataplanedeployment.dataplane.openstack.org/openstack-edpm-2 created
-[fultonj@hamfast crs{main}]$
-```
-
-```
-[fultonj@hamfast ~]$ oc get pods -w | grep dataplane
-dataplane-deployment-configure-os-openstack-edpm-z4lx4   0/1     Completed   0          5h57m
-dataplane-deployment-run-os-openstack-edpm-9z7ns         0/1     Completed   0          5h56m
-dataplane-deployment-ceph-client-openstack-edpm-2-4tg88   0/1     Pending     0          0s
-dataplane-deployment-ceph-client-openstack-edpm-2-4tg88   0/1     Pending     0          0s
-dataplane-deployment-ceph-client-openstack-edpm-2-4tg88   0/1     ContainerCreating   0          0s
-dataplane-deployment-ceph-client-openstack-edpm-2-4tg88   0/1     ContainerCreating   0          3s
-dataplane-deployment-ceph-client-openstack-edpm-2-4tg88   1/1     Running             0          8s
-```
+Use `oc get pods | grep dataplane` to observe the ansible jobs
+deploying each service in the `servicesOverride` list. When the jobs
+are finished you should have three HCI EDPM nodes ready to host Nova
+instances.
 
 ## Test
 

@@ -1,0 +1,13 @@
+apiVersion: dataplane.openstack.org/v1beta1
+kind: OpenStackDataPlaneDeployment
+metadata:
+  name: deployment-post-ceph
+  namespace: openstack
+spec:
+  nodeSets:
+    - openstack-edpm
+  servicesOverride:
+    - ceph-client
+    - ovn
+    - libvirt
+    - nova-custom-ceph

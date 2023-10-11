@@ -1,22 +1,10 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: openstack
-
 resources:
 - ../../base/
- 
-# Do not deploy nova yet, but configure network, ntp and ceph firewall ports
 patches:
   - patch: |-
-      - op: replace
-        path: /spec/services
-        value:
-          - configure-network
-          - validate-network
-          - install-os
-          - ceph-hci-pre
-          - configure-os
-          - run-os
       - op: add
         path: /spec/nodeTemplate/extraMounts
         value:
@@ -29,6 +17,17 @@ patches:
               persistentVolumeClaim:
                 claimName: edpm-ansible
                 readOnly: true
+          - extraVolType: Ceph
+            volumes:
+            - name: ceph
+              projected:
+                sources:
+                - secret:
+                    name: ceph-conf-files
+            mounts:
+            - name: ceph
+              mountPath: "/etc/ceph"
+              readOnly: true
           - extraVolType: Logs
             mounts:
             - mountPath: /runner/artifacts
