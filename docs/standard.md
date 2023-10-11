@@ -32,7 +32,7 @@ Set `CONTROL` to `1` and while the control plane is still coming up
 build the EDPM nodes sequentially with the following tags set to `1`.
 
 - `EDPM_NODE`
-- `EDPM_NODE_REPOS`
+- `EDPM_DEPLOY_PREP`
 
 When `oc get pods` shows that `nova-api` and `dnsmasq-dns` are running
 the contorl plane should be ready.
@@ -45,25 +45,27 @@ to SSH into `edpm-compute-0`.
 [deploy.sh](../scripts/deploy.sh) assumes [jumbo frames](notes/mtu.md)
 are enabled on the hypervisor.
 
-## Create an OpenStackDataPlaneNodeSet CR with edpm_deploy_prep
+## Create an OpenStackDataPlaneNodeSet CR
 
-I don't use `make edpm_deploy` because I like to have a CR file to
-review and modify before I start the deployment. Thus, I use `make
-edpm_deploy_prep` and `kustomize` to create a `deployment.yaml` file.
-
-Create a `deployment.yaml` file in the base data_plane CR directory.
+[deploy.sh](../scripts/deploy.sh) should have created the CR if it was
+run with `EDPM_DEPLOY_PREP` enabled.
 ```
-TARGET=$HOME/antelope/crs/data_plane/base/deployment.yaml
-pushd ~/install_yamls
-DATAPLANE_CHRONY_NTP_SERVER=time.google.com \
-    DATAPLANE_TOTAL_NODES=3 \
-    DATAPLANE_SINGLE_NODE=false \
-    make edpm_deploy_prep
-oc kustomize out/openstack/dataplane/cr > $TARGET
+pushd ~/antelope/crs/
+oc create -f data_plane/base/deployment.yaml
 popd
 ```
 
-[deploy.sh](../scripts/deploy.sh) does this when EDPM_DEPLOY_PREP is used.
+The CR comes from running `make edpm_deploy_prep` from
+[install_yamls](https://github.com/openstack-k8s-operators/install_yamls/tree/main#deploy-dev-env-using-crc-edpm-nodes-with-isolated-networks).
+I don't use `make edpm_deploy` because I like to have a CR file to
+review and modify before I start the deployment.
+
+The CR should only contain an OpenStackDataPlane
+[NodeSet](https://openstack-k8s-operators.github.io/dataplane-operator/openstack_dataplanenodeset)
+and not a
+[Deployment](https://openstack-k8s-operators.github.io/dataplane-operator/openstack_dataplanedeployment).
+The CR will be a base for
+[kustomzation overlays](../crs/data_plane/overlay/).
 
 ### Create a configuration snippet
 
@@ -86,38 +88,37 @@ we cannot redefine a custom version of `nova` service since
 the "default service will overwrite the custom service with the same
 name during role reconciliation".
 
-### Customize the OpenStackDataPlaneNodeSet CR
+### Create an OpenStackDataPlaneDeployment to run Ansible
 
-Have [kustomize](https://kustomize.io/) apply changes to the
-OpenStackDataPlaneNodeSet CR:
-```
-pushd ~/antelope/crs/
-kustomize build data_plane/overlay/standard > data_plane.yaml
-```
 The
-[deployment.yaml in the standard overlay](../crs/data_plane/overlay/standard/deployment.yaml)
-replaces the `nova` service with the `nova-custom` service
-which uses the configuration snippet.
+[standard ansible deployment](../crs/deployments/deployment-standard.yaml)
+contains the list of services to be configured including the
+`nova-custom` service which uses the configuration snippet from the
+previous step.
 
-## Run EDPM Ansible
 ```
-oc create -f data_plane.yaml
+oc create -f deployments/deployment-standard.yaml
 ```
 I then like to use the following to watch the playbooks:
 ```
 oc get pods -w | grep dataplane
-oc logs -f dataplane-deployment-configure-network-standard-openstack-jkwcm
+oc logs -f dataplane-deployment-configure-network-deployment-standardsvs8r
 ```
 
 ### Stop Failing Ansible Jobs
 
 If Ansible fails and you want to tell the dataplane-operator to stop
-spawning Ansible jobs, then delete the `OpenStackDataPlaneNodeSet` CR.
+spawning Ansible jobs, then delete the
+`OpenStackDataPlaneNodeDeployment` CR.
+
 ```
-oc delete -f data_plane.yaml
+oc delete -f deployments/deployment-standard.yaml
 ```
-You can then edit your `data_plane.yaml` accordingly and recreate it to
-try again.
+You can then update OpenStack DataPlane
+[NodeSet](https://openstack-k8s-operators.github.io/dataplane-operator/openstack_dataplanenodeset)
+(e.g. `data_plane/base/deployment.yaml`) or
+[Deployment](https://openstack-k8s-operators.github.io/dataplane-operator/openstack_dataplanedeployment) (e.g. `deployments/deployment-standard.yaml`)
+recreate the deployment to try again.
 
 The above shouldn't be necessary unless the Ansible jobs have a
 problem. If all of the Ansible jobs succeed, then the completed
@@ -148,18 +149,36 @@ provided by a PVC), a private network and be able to boot a VM.
 
 ## Clean
 
-Delete the `OpenStackDataPlaneNodeSet` CR.
+### Delete Deployment
+
+Delete the `OpenStackDataPlaneDeployment` CR.
 ```
-oc delete -f data_plane.yaml
+oc delete -f deployments/deployment-standard.yaml
 ```
 Another way to do this if you don't have the CR file is.
 ```
-oc delete openstackdataplane.dataplane.openstack.org/openstack-edpm
+oc delete openstackdataplanedeployments.dataplane.openstack.org/deployment-standard
 ```
-Use `oc edit openstackdataplane.dataplane.openstack.org` to determine
-the name if `openstack-edpm` does not match.
+Use `openstackdataplanedeployments.dataplane.openstack.org` to
+determine the name.
 
-Use [clean.sh](../scripts/clean.sh).
+### Delete NodeSet
+
+Delete the `OpenStackDataPlaneNodeSet` CR.
+```
+oc delete -f data_plane/base/deployment.yaml
+```
+Another way to do this if you don't have the CR file is.
+```
+oc delete openstackdataplanenodesets.dataplane.openstack.org/openstack-edpm
+```
+Use `oc edit openstackdataplanenodesets.dataplane.openstack.org` to
+determine the name.
+
+### clean.sh script
+
+Use [clean.sh](../scripts/clean.sh). The script deletes all found
+`OpenStackDataPlaneDeployments` and `OpenStackDataPlaneNodeSets`.
 
 - Set `EDPM_NODE`, `CONTROL`, and `PVC` to `1`
 
@@ -175,7 +194,7 @@ Other vars can keep their defualts of 0 (though NODES defaults to 2).
   running the control plane should be ready.
 
 - You should now be able to start again from "Create an
-  OpenStackDataPlaneNodeSet CR with edpm_deploy_prep".
+  OpenStackDataPlaneNodeSet CR"
 
 ### Clean Everything
 

@@ -30,24 +30,6 @@ A `crs/data_plane/base/deployment.yaml` file exists to kustomize.
 5. Create a [post-ceph ansible deployment](../crs/deployments/deployment-post-ceph.yaml)
    to complete configuration of EDPM nodes as Nova computes
 
-### Separate NodeSet and Deployment CRs
-
-The single target file `crs/data_plane/base/deployment.yaml` generated
-by [install_yamls](https://github.com/openstack-k8s-operators/install_yamls)
-contains two yaml documents: one with a
-[NodeSet](https://openstack-k8s-operators.github.io/dataplane-operator/openstack_dataplanenodeset)
-and one with a
-[Deployment](https://openstack-k8s-operators.github.io/dataplane-operator/openstack_dataplanedeployment).
-Split the documents and keep only the NodeSet as the new target.
-
-```
-TARGET=$HOME/antelope/crs/data_plane/base/deployment.yaml
-csplit --elide-empty-files -f dataplane- -b %d.yaml $TARGET "/^---$/" "{*}"
-diff -u $TARGET dataplane-1.yaml
-mv dataplane-1.yaml $TARGET
-rm dataplane-0.yaml
-```
-
 ## Configure the networks of the EDPM nodes
 
 The [storage-mgmt](../crs/data_plane/overlay/storage-mgmt) kustomize

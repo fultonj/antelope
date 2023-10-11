@@ -134,6 +134,7 @@ if [ $EDPM_SVCS -eq 1 ]; then
 fi
 
 if [ $EDPM_DEPLOY_PREP -eq 1 ]; then
+    # Create base NodeSet for future data_plane CR kustomizations
     TARGET=$HOME/antelope/crs/data_plane/base/deployment.yaml
     pushd ~/install_yamls
     DATAPLANE_CHRONY_NTP_SERVER=time.google.com \
@@ -143,6 +144,14 @@ if [ $EDPM_DEPLOY_PREP -eq 1 ]; then
     oc kustomize out/openstack/dataplane/cr > $TARGET
     popd
     ls -l $TARGET
+
+    # Remove the OpenStackDataPlane Deployment
+    pushd /tmp/
+    csplit --elide-empty-files -f dataplane- -b %d.yaml $TARGET "/^---$/" "{*}"
+    diff -u $TARGET dataplane-1.yaml
+    mv dataplane-1.yaml $TARGET
+    rm dataplane-0.yaml
+    popd
 fi
 
 if [ $EDPM_DEPLOY_STANDARD -eq 1 ]; then
