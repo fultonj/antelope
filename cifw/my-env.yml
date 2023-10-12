@@ -1,5 +1,9 @@
 ---
 cifmw_libvirt_manager_compute_amount: 3
+cifmw_libvirt_manager_compute_disksize: 20
+cifmw_libvirt_manager_compute_memory: 8
+cifmw_libvirt_manager_compute_cpus: 8
+
 cifmw_install_yamls_vars:
   DATAPLANE_CHRONY_NTP_SERVER: "clock.redhat.com"
   BMO_SETUP: false
