@@ -1,0 +1,34 @@
+---
+cifmw_repo_setup_os_release: 'centos'
+cifmw_repo_setup_dist_major_version: 9
+cifmw_basedir: "{{ ansible_user_dir }}/ci-framework-data"
+cifmw_rhol_crc_use_installyamls: true
+cifmw_installyamls_repos: "{{ ansible_user_dir }}/install_yamls"
+cifmw_install_yamls_vars:
+  BMO_SETUP: false
+cifmw_rhol_crc_config:
+  pull-secret-file: "{{ ansible_user_dir }}/pull-secret"
+  cpus: 56
+  memory: 262144
+  disk-size: 200
+  # hamfast
+  #cpus: 12
+  #memory: 49152
+  #disk-size: 100
+cifmw_use_libvirt: true
+cifmw_deploy_edpm: true
+cifmw_use_crc: true
+cifmw_operator_build_push_registry: "default-route-openshift-image-registry.apps-crc.testing"
+cifmw_operator_build_meta_build: false
+pre_infra:
+  - name: Download needed tools
+    inventory: "{{ cifmw_installyamls_repos }}/devsetup/hosts"
+    type: playbook
+    source: "{{ cifmw_installyamls_repos }}/devsetup/download_tools.yaml"
+
+# 3 EDPM nodes
+cifmw_libvirt_manager_compute_amount: 3
+
+cifmw_install_yamls_vars:
+  DATAPLANE_CHRONY_NTP_SERVER: "clock.redhat.com"
+  NETWORK_MTU: 9000
