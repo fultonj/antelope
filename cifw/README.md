@@ -9,6 +9,10 @@ on my RHEL9 hypervisor.
 Follow the "On your own hardware"
 [guide](https://ci-framework.readthedocs.io/en/latest/quickstart/04_non-virt.html)
 
+I'm deploying with CRC today. I hope to swap it out for 3 OpenShift
+all-in-one nodes (VMs) but right now my priority is to get a good way
+to deploy VA1 using ci-framework.
+
 I use the following so I can type less.
 
 - [deploy.sh](deploy.sh)
@@ -18,19 +22,25 @@ I have continue updating [my-env.yml](my-env.yml) until I'm happy with it.
 
 ## Open Questions
 
-- How do increase the RAM/CPU on my deployed EDPM VMs?
-  https://github.com/openstack-k8s-operators/ci-framework/pull/661
+### How do increase the RAM/CPU on my deployed EDPM VMs?
 
-- How do I deploy without redeloying CRC?
+https://github.com/openstack-k8s-operators/ci-framework/pull/661
+
+### How do I deploy without redeloying CRC? (need real fix)
 
 Workaround: for now I let it deploy CRC and once I have a working
 environment I just interact directly with OpenShift CRs.
 
-- How do I redeploy only my compute nodes?
+"No cleaning logic (yet). If crc is present, it shouldn't try to
+override it. It shouldn't recreate anything that is already existing
+in fact. If you want to re-create the compute(s), remove them from
+libvirt, and re-run. It should regenerate the things."
 
-Workaround: install_yamls is ther so use it.
+### How do I redeploy only my control plane pods compute nodes? (need real fix)
 
-- How do I not deploy certain services? Can I pass my own CRs as input?
+Workaround: install_yamls is there so use it.
+
+### Can I pass my own CRs as input? (need real fix)
 
 Workaround: Once the basic services get deployed I get into my
 environment and directly edit the CRs. Example:
