@@ -6,25 +6,41 @@ My notes from [running_local_operator](https://github.com/openstack-k8s-operator
 
 Identify the CSV
 ```
-oc get csv | grep DataPlane
+$ oc get csv | grep openstack-operator
+openstack-operator.v0.0.1               OpenStack                      0.0.1                            Succeeded
+$
 ```
-
 Patch the CSV for the dataplane operator so that it scales down to 0
-```
-CSV=dataplane-operator.v0.0.1
 
-oc get csv -n openstack-operators $CSV -o json | \
-    jq -r 'del(.metadata.generation, .metadata.resourceVersion, .metadata.uid)'  > operator_csv.json
+```
+CSV=openstack-operator.v0.0.1
+OPERATOR=${OPERATOR:-"dataplane"}
+CONTROLLER_MANAGER=${CONTROLLER_MANAGER:-"${OPERATOR}-operator-controller-manager"}
+SCALE=${SCALE:-0}
 
-oc patch csv -n openstack-operators $CSV --type json \
-  -p="[{"op": "replace", "path": "/spec/install/spec/deployments/0/spec/replicas", "value": "0"}]"
-```
-Disable the OLM webhooks
-```
+oc project openstack-operators
+
+INDEX=$(oc get csv $CSV -o json | jq ".spec.install.spec.deployments | map(.name==\"${CONTROLLER_MANAGER}\") | index(true)")
+
+oc patch csv $CSV --type='json' -p='[{"op": "replace", "path": "/spec/install/spec/deployments/'${INDEX}'/spec/replicas", "value":'${SCALE}'}]'
+
+# Disable the OLM webhooks
+
 oc patch csv -n openstack-operators $CSV --type=json -p="[{'op': 'remove', 'path': '/spec/webhookdefinitions'}]"
+
+oc project openstack
 ```
-After running the above you should see:
-`clusterserviceversion.operators.coreos.com/dataplane-operator.v0.0.1 patched`
+
+Alternatively: webhookdefinitions 4 and 5 are the
+dataplane-operator's.
+
+```
+# Remove webhooks
+oc patch csv -n openstack-operators ${OPERATOR_CSV} --type=json \
+  -p="[{'op': 'remove', 'path': '/spec/webhookdefinitions/5'}]"
+oc patch csv -n openstack-operators ${OPERATOR_CSV} --type=json \
+  -p="[{'op': 'remove', 'path': '/spec/webhookdefinitions/4'}]"
+```
 
 ## Run local copy of the operator with webhooks
 ```
