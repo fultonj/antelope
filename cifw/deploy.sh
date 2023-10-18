@@ -7,9 +7,7 @@ if [[ ! -d venv ]]; then
 fi
 source venv/bin/activate 
 
-pip list
-
-ansible-playbook deploy-edpm.yml \
+time ansible-playbook deploy-edpm.yml \
                  -e @~/my-env.yml \
                  --skip-tags admin-setup,run-tests,logs
 
