@@ -10,9 +10,10 @@ source venv/bin/activate
 pip list
 
 ansible-playbook deploy-edpm.yml \
-                 -e @~/my-env.yml
+                 -e @~/my-env.yml \
+                 --skip-tags admin-setup,run-tests,logs
 
-# --skip-tags packages,boostrap,infra,test
+# --skip-tags packages,boostrap
 
 deactivate
 popd
