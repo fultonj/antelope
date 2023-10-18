@@ -11,7 +11,6 @@ ansible-playbook cleanup-edpm.yml -e @~/my-env.yml
 rm -rf ~/ci-framework-data
 rm -rf ~/ansible_facts_cache
 mv ~/ansible.log ~/ansible.log.old
-gzip ~/ansible.log.old
 
 for I in $(seq 0 2); do
     make -C $HOME/install_yamls/devsetup edpm_compute_cleanup EDPM_COMPUTE_SUFFIX=$I;
