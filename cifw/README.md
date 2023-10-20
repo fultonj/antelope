@@ -61,3 +61,9 @@ Oh, ceilometer image can't be downloaded. I don't need that.
 $ oc edit openstackcontrolplane
 ```
 After setting `enabled: false` and exiting it quickly finished.
+
+## Reproducer
+
+I'm testing this patch using [repro.sh](repro.sh).
+
+  https://github.com/openstack-k8s-operators/ci-framework/pull/690
