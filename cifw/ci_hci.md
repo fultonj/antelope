@@ -6,17 +6,20 @@ including the job `podified-multinode-edpm-deployment-crc` which
 uses one compute and one crc. This is a gating job.
 
 [PR 588 to ci-framework](https://github.com/openstack-k8s-operators/ci-framework/pull/588)
-introduced `podified-multinode-hci-deployment-crc-3comp-testproject`.
-As of October 2023 this is not a gating job. It is planned that it
-will be a periodic job so we can check nightly results. If you
-write code in https://github.com/openstack-k8s-operators and want
-the CI to run it against HCI, then you can create a DNM patch in
-`testproject` which `depends-on` your patch. For example the following
-tested the original
+added a role to test HCI. Then 
+[PR691](https://github.com/openstack-k8s-operators/ci-framework/commit/cb779ce53ba55f70a6536d28e3f78d5b0143908f)
+introduced `podified-multinode-hci-deployment-crc` which
+will gate any change to 
+[these files](https://github.com/openstack-k8s-operators/ci-framework/commit/cb779ce53ba55f70a6536d28e3f78d5b0143908f#diff-907d84a405081e9db4210be5cf0000e7c775eec6e874234f282ad829317e6975)
+
+It is planned that we will also have a periodic job so we can check
+nightly results. If you have other code in
+https://github.com/openstack-k8s-operators and want the CI to run it
+against HCI, then you can create a DNM patch in `testproject` which
+`depends-on` your patch. For example the following tested the original
 [PR 588](https://github.com/openstack-k8s-operators/ci-framework/pull/588).
 
   https://review.rdoproject.org/r/c/testproject/+/48781
-
 
 ## Create your own test project patch
 
@@ -59,4 +62,3 @@ You create a new `.zuul.yaml` file with the job yaml and you put the
 `depends-on` in the commit message. The CI should then run your new
 code and you can click the review created to see the results of your
 job.
-
