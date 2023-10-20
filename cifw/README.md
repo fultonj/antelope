@@ -6,6 +6,10 @@ using the
 [ci-framework](https://github.com/openstack-k8s-operators/ci-framework).
 on my RHEL9 hypervisor.
 
+While doing so it is also useful to experiment with having a
+an architecture similar to va1 deployed in RDO CI
+as described in [CI for HCI](ci_hci.md).
+
 Follow the "On your own hardware"
 [guide](https://ci-framework.readthedocs.io/en/latest/quickstart/04_non-virt.html)
 
