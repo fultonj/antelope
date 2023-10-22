@@ -33,11 +33,6 @@ for I in $(seq $NODE_START $NODES); do
     fi
 done
 
-# Configure repository on running EDPM nodes
-export EDPM_NODE_REPOS=1
-bash deploy.sh
-unset EDPM_NODE_REPOS
-
 # Wait until we can deploy prep
 eval $(crc oc-env)
 oc login -u kubeadmin -p 12345678 https://api.crc.testing:6443
