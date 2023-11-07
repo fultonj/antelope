@@ -171,13 +171,15 @@ if [ $VM -eq 1 ]; then
         echo "'openstack hypervisor list' empty after 'nova-manage cell_v2 discover_hosts'"
         exit 1
     fi
-    FLAV_ID=$(openstack flavor show c1 -f value -c id)
-    if [[ -z $FLAV_ID ]]; then
+    FLAV_ID=$(openstack flavor show c1 -f value -c id 2> /dev/null)
+    if [[ $? -gt 0 ]]; then
         openstack flavor create c1 --vcpus 1 --ram 256
+        FLAV_ID=$(openstack flavor show c1 -f value -c id 2> /dev/null)
     fi
-    NOVA_ID=$(openstack server show $VM_NAME -f value -c id)
-    if [[ -z $NOVA_ID ]]; then
+    NOVA_ID=$(openstack server show $VM_NAME -f value -c id 2> /dev/null)
+    if [[ $? -gt 0 ]]; then
         openstack server create --flavor c1 --image cirros --nic net-id=private $VM_NAME
+        NOVA_ID=$(openstack server show $VM_NAME -f value -c id 2> /dev/null)
     fi
     openstack server list
     if [[ $(openstack server list -c Status -f value) == "BUILD" ]]; then
