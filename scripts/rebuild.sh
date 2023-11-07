@@ -61,8 +61,10 @@ while [ 1 ]; do
     echo -n "."
     sleep 1
 done
-export OS_CLOUD=default
-export OS_PASSWORD=12345678
+
+openstack() {
+    oc rsh -t --shell='/bin/sh' openstackclient openstack $@
+}
 openstack endpoint list
 
 echo "Waiting for public and private nova endpoints to be listed in keystone"
@@ -74,6 +76,7 @@ while [[ 1 ]]; do
         sleep 1
     fi
 done
+unset -f openstack
 
 echo "select * from services in nova_cell1"
 # list services in cell1
