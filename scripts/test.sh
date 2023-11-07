@@ -1,13 +1,13 @@
 #!/bin/bash
 
 OVERVIEW=0
-CEPH=1
-GLANCE=1
-GLANCE_DEL=1
+CEPH=0
+GLANCE=0
+GLANCE_DEL=0
 IMPORT_RAW=0
 RMIMG=0
-CINDER=1
-VOL_FROM_IMAGE=1
+CINDER=0
+VOL_FROM_IMAGE=0
 NOVA_CONTROL_LOGS=0
 NOVA_COMPUTE_LOGS=0
 PRINET=0
@@ -31,8 +31,9 @@ VOL_NAME=vol1
 VM_NAME=vm1
 VOL_IMG_NAME="${VOL_NAME}-${IMG_NAME}"
 
-export OS_CLOUD=default
-export OS_PASSWORD=12345678
+openstack() {
+    oc rsh -t --shell='/bin/sh' openstackclient openstack $@
+}
 
 if [ $OVERVIEW -eq 1 ]; then
    openstack endpoint list
@@ -286,11 +287,13 @@ if [ $PET -eq 1 ]; then
     openstack server list
 fi
 
+unset -f openstack
+
 if [ $RGW -eq 1 ]; then
     echo "Testing the following object-store endpoint"
     RGW_ENDPOINTS=0
-    for ID in $(openstack endpoint list -f value | grep object-store | awk {'print $1'}); do
-        openstack endpoint show $ID
+    for ID in $(oc rsh openstackclient openstack endpoint list -f value | grep object-store | awk {'print $1'}); do
+        oc rsh openstackclient openstack endpoint show $ID
         RGW_ENDPOINTS=$[$RGW_ENDPOINTS +1]
     done
     if [[ $RGW_ENDPOINTS -eq 0 ]]; then
