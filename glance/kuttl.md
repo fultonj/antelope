@@ -15,7 +15,6 @@ tags.
 - PVC
 - DEPS
 - OPER
-- CONTROL
 
 Before running kuttl ensure your image and repository are aligned as
 described in the next section.
