@@ -40,24 +40,24 @@ dial tcp 192.168.130.1:9443: connect: connection refused
 
 ## Align image and repository
 
-Determine which the glance-operator container image you are running:
+Determine which glance-operator image is running:
 ```
 OP=$(oc get pod -n openstack-operators | grep glance-operator-controller | awk {'print $1'})
 IMG=$(oc get pod -n openstack-operators $OP -o yaml | grep quay | tail -1 | awk {'print $2'})
 echo $IMG
 ```
-Look up when that image was built by finding it on the list of built images:
+Use the list of built images to determine when that image was built:
 
   https://quay.io/repository/openstack-k8s-operators/glance-operator?tab=tags
 
-Look up which version of the glance repository is compatible with that
+Look for which version of the glance repository is compatible with that
 image (e.g. on the same date):
 
   https://github.com/openstack-k8s-operators/glance-operator/commits/main
 
-It's possible that the kuttl tests defined in that same repository
-were only tested with an image from that point in time and won't work
-with another image.
+It's possible that the kuttl tests defined in the repository
+were only tested with an image from the same point in time and won't
+work with another image.
 
   https://github.com/openstack-k8s-operators/glance-operator/tree/main/test/kuttl/tests/glance_scale
 
