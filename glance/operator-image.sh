@@ -5,7 +5,12 @@
 NEW=quay.io/fultonj/glance-operator:fultonj-test
 
 CSV=$(oc get csv -n openstack-operators | grep glance | awk {'print $1'})
-echo "Updating $CSV so it uses $NEW"
+if [[ -z $CSV ]]; then
+    echo "Glance operator not found in CSV"
+    exit 1
+else
+    echo "Updating $CSV so it uses $NEW"
+fi
 
 echo "Backing up $CSV to glance_operator_csv.json"
 oc get csv -n openstack-operators $CSV -o json | \

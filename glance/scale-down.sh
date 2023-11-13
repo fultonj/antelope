@@ -4,7 +4,12 @@
 # https://github.com/openstack-k8s-operators/docs/blob/main/running_local_operator.md
 
 CSV=$(oc get csv -n openstack-operators | grep glance | awk {'print $1'})
-echo "Scaling down $CSV as deployed by OLM"
+if [[ -z $CSV ]]; then
+    echo "Glance operator not found in CSV"
+    exit 1
+else
+    echo "Scaling down $CSV as deployed by OLM"
+fi
 
 echo "Backing up $CSV to glance_operator_csv.json"
 oc get csv -n openstack-operators $CSV -o json | \
