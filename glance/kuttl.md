@@ -1,12 +1,14 @@
 # Running Glance kuttl tests
 
-## Environment
+## Prerequisites
 
-As described in
-[kuttl-test.yaml](https://github.com/openstack-k8s-operators/glance-operator/blob/main/kuttl-test.yaml),
-on a fresh hypervisor run
-[deploy.sh](../scripts/deploy.sh)
-with the following tags.
+The prerequisites to run kuttl are described in the comments of
+[kuttl-test.yaml](https://github.com/openstack-k8s-operators/glance-operator/blob/main/kuttl-test.yaml).
+I have my own variation of this procedure.
+
+Ensure you have the kuttl CLI command installed and set up a fresh
+hypervisor using [deploy.sh](../scripts/deploy.sh) with the following
+tags.
 
 - CRC
 - ATTACH
@@ -15,11 +17,8 @@ with the following tags.
 - OPER
 - CONTROL
 
-Then run:
-```
-pushd ~/install_yamls/
-make glance_kuttl
-```
+Before running kuttl ensure your image and repository are aligned as
+described in the next section.
 
 ### Why a fresh crc?
 
@@ -39,7 +38,92 @@ failed to call webhook: Post
 dial tcp 192.168.130.1:9443: connect: connection refused
 ```
 
-## Results
+## Align image and repository
+
+Determine which the glance-operator container image you are running:
+```
+OP=$(oc get pod -n openstack-operators | grep glance-operator-controller | awk {'print $1'})
+IMG=$(oc get pod -n openstack-operators $OP -o yaml | grep quay | tail -1 | awk {'print $2'})
+echo $IMG
+```
+Look up when that image was built by finding it on the list of built images:
+
+  https://quay.io/repository/openstack-k8s-operators/glance-operator?tab=tags
+
+Look up which version of the glance repository is compatible with that
+image (e.g. on the same date):
+
+  https://github.com/openstack-k8s-operators/glance-operator/commits/main
+
+It's possible that the kuttl tests defined in that same repository
+were only tested with an image from that point in time and won't work
+with another image.
+
+  https://github.com/openstack-k8s-operators/glance-operator/tree/main/test/kuttl/tests/glance_scale
+
+Use [this process](image.md) to build an image with the branch to be
+teted and update the CSV to run that image.
+
+Alternatively, you should be able to run a [local copy](local.md)
+of the operator and run kuttl the same way.
+
+## Running kuttl
+
+As per
+[kuttl-test.yaml](https://github.com/openstack-k8s-operators/glance-operator/blob/main/kuttl-test.yaml):
+
+```
+pushd ~/install_yamls/
+GLANCE_KUTTL_NAMESPACE=glance-kuttl-tests GLANCE_KUTTL_DIR=~/glance-operator/ make glance_kuttl
+```
+`GLANCE_KUTTL_DIR` is set to prevent it from downloading a new copy
+from the main repo. I'm assuming you want to test your own patch to
+both the operator code and kuttl test definition which is in
+`~/glance-operator/`.
+
+`GLANCE_KUTTL_NAMESPACE` is set to its default (`glance-kuttl-tests`) 
+in my example to make it easy to copy/paste the above and switch the
+namespace if you want to run a new test in a clean environment in a
+new namespace.
+
+If you want to run the kuttl tests directly in an environment where
+you have already deployed keystone, memcached and galera then you can
+use this.
+```
+kubectl-kuttl test --config ~/glance-operator/kuttl-test.yaml ~/glance-operator/test/kuttl/tests --namespace openstack | tee -a $HOME/kuttl.log
+```
+
+## Example of Good Results
+
+After running the `make glance_kuttl` variation above you should be
+able to scroll up and see the following indicating that the kuttl
+tests passed.
+
+```
+--- PASS: kuttl (10.97s)
+    --- PASS: kuttl/harness (0.00s)
+        --- PASS: kuttl/harness/.git (0.00s)
+        --- PASS: kuttl/harness/pkg (0.00s)
+        --- PASS: kuttl/harness/test (0.00s)
+        --- PASS: kuttl/harness/templates (0.00s)
+        --- PASS: kuttl/harness/config (0.00s)
+        --- PASS: kuttl/harness/hack (0.00s)
+        --- PASS: kuttl/harness/docs (0.00s)
+        --- PASS: kuttl/harness/controllers (0.00s)
+        --- PASS: kuttl/harness/api (0.00s)
+        --- PASS: kuttl/harness/bin (0.00s)
+        --- PASS: kuttl/harness/.github (0.00s)
+```
+
+A command like `oc -n glance-kuttl-tests2 get pods` will return
+nothing because by default the environment to run the test is claned
+up.
+
+On [my machine](https://pcpartpicker.com/user/fultonj/saved/v9KLD3)
+the `make glance_kuttl` variation took about 10 minutes.
+
+
+## Example of Bad Results
 
 After 5 minutes in the fresh env I see the following:
 ```
@@ -105,27 +189,8 @@ retrieving API resource for kuttl.dev/v1beta1, Kind=TestAssert failed: the serve
 retrieving API resource for kuttl.dev/v1beta1, Kind=TestAssert failed: the server could not find the requested resource
 Error: asserts not valid
 ```
+The root cause of the above result was that the image and the
+repository were not aligned as described under "Align image and
+repository".
 
-I assume the original error was due a misalignment as described in the next section.
 
-## Align image and repository
-
-Determine when the glance-operator container image you are running:
-
-```
-$ oc get pod -n openstack-operators glance-operator-controller-manager-64784d8d54-zzq8r -o yaml | grep quay | tail -1
-    imageID: quay.io/openstack-k8s-operators/glance-operator@sha256:e9d5f2e5de6192c3ca705c539efa79d90cc0c7d0762de9591b6160fcc0238fc7
-```
-was built by finding it on the list of built images:
-
-  https://quay.io/repository/openstack-k8s-operators/glance-operator?tab=tags
-
-and use a version of the glance repository that is compatible (e.g. on the same date):
-
-  https://github.com/openstack-k8s-operators/glance-operator/commits/main
-
-otherwise the kuttl test defined in the repository:
-
-  https://github.com/openstack-k8s-operators/glance-operator/tree/main/test/kuttl/tests/glance_scale
-
-might have been designed to work with a different image.
