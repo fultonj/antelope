@@ -102,8 +102,12 @@ if [ $CONTROL -eq 1 ]; then
     TARGET=$HOME/antelope/crs/control_plane/base/deployment.yaml
     DBSERVICE=galera make openstack_deploy_prep
     kustomize build out/openstack/openstack/cr > $TARGET
-    # disable swift
+
     /usr/local/bin/yq -i '(.spec.swift.enabled)=false' $TARGET
+    /usr/local/bin/yq -i '(.spec.heat.enabled)=false' $TARGET
+    /usr/local/bin/yq -i '(.spec.ceilometer.enabled)=false' $TARGET
+    /usr/local/bin/yq -i '(.spec.horizon.enabled)=false' $TARGET
+
     # The following will implicitly call 'make netconfig_deploy'
     NETCONFIG_CR=/tmp/netconfig.yaml OPENSTACK_CR=$TARGET make openstack_deploy
 fi
