@@ -7,3 +7,4 @@ My notes for working on the
 - [Build your own Glance operator image](image.md)
 - [Run Glance kuttl tests](kuttl.md)
 - [Run Glance env tests](env_tests.md)
+- [Run a minimal control plane with Glance](minimal.md)

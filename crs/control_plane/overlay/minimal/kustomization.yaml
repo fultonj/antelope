@@ -1,0 +1,38 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: openstack
+
+resources:
+- ../../base/
+
+# Scale glance replicas to 3 
+# Disable five services unnecessary for Glance
+# Note: heat ceilometer horizon already disabled by deploy.sh
+patches:
+  - patch: |-
+      - op: add
+        path: /spec/glance/template/glanceAPIInternal/replicas
+        value: 3
+      - op: add
+        path: /spec/glance/template/glanceAPIExternal/replicas
+        value: 3
+      - op: add
+        path: /spec/cinder/enabled
+        value: false
+      - op: add
+        path: /spec/neutron/enabled
+        value: false
+      - op: add
+        path: /spec/nova/enabled
+        value: false
+      - op: add
+        path: /spec/rabbitmq/enabled
+        value: false
+      - op: add
+        path: /spec/placement/enabled
+        value: false
+      - op: add
+        path: /spec/ovn/enabled
+        value: false
+    target:
+      kind: OpenStackControlPlane
