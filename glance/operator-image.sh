@@ -2,7 +2,8 @@
 
 # Update the CSV so it uses a new glance operator image
 
-NEW=quay.io/fultonj/glance-operator:fultonj-test
+NEW=quay.io/openstack-k8s-operators/glance-operator:latest
+#NEW=quay.io/fultonj/glance-operator:fultonj-test
 
 CSV=$(oc get csv -n openstack-operators | grep glance | awk {'print $1'})
 if [[ -z $CSV ]]; then
