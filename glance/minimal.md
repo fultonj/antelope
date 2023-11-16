@@ -4,7 +4,7 @@ These are my notes on deploying a minimal Glance environment for
 development.
 
 Unlike [standard](../docs/standard.md) it only runs the following
-control plane services but sets Glance to replica 3.
+control plane services.
 
 - galera
 - keystone
@@ -14,17 +14,9 @@ control plane services but sets Glance to replica 3.
 - dnsmasq-dns
 - ovn-controller
 
-## Initial Set Up
-
-Use [deploy.sh](../scripts/deploy.sh) sequentially with the following
-tags set to `1`.
-
-- `CRC`
-- `ATTACH`
-- `PVC`
-- `DEPS`
-
 ## Deploy Operators
+
+With a new hypervisor first run [init.sh](../scripts/init.sh).
 
 Use [deploy.sh](../scripts/deploy.sh) with `OPER` set to 1.
 
@@ -62,7 +54,8 @@ make openstack_cleanup        # rm operators
 popd
 ```
 
-After cleaning resume at "Deploy Operators" or "Deploy Control Plane".
+After cleaning resume at "Deploy Operators" or "Deploy Control Plane"
+and skip running init.sh.
 
 ## Script
 
