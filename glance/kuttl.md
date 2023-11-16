@@ -39,12 +39,8 @@ dial tcp 192.168.130.1:9443: connect: connection refused
 
 ## Align image and repository
 
-Determine which glance-operator image is running:
-```
-OP=$(oc get pod -n openstack-operators | grep glance-operator-controller | awk {'print $1'})
-IMG=$(oc get pod -n openstack-operators $OP -o yaml | grep quay | tail -1 | awk {'print $2'})
-echo $IMG
-```
+Determine which glance-operator image is running with [which_image.sh](which_image.sh).
+
 Use the list of built images to determine when that image was built:
 
   https://quay.io/repository/openstack-k8s-operators/glance-operator?tab=tags
