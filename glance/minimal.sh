@@ -42,6 +42,8 @@ if [ $OPER -eq 1 ]; then
     export OPER=1
     bash ../scripts/deploy.sh
     unset OPER
+    echo "Waiting for openstack-operators to be running"
+    timeout 300 bash -c 'until $(oc get csv -l operators.coreos.com/openstack-operator.openstack-operators -n openstack-operators | grep -q Succeeded); do echo -n "."; sleep 1; done'
 fi
 
 if [ $IMG -eq 1 ]; then
