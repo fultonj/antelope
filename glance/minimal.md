@@ -63,3 +63,12 @@ popd
 ```
 
 After cleaning resume at "Deploy Operators" or "Deploy Control Plane".
+
+## Script
+
+[minimal.sh](minimal.sh) speeds up the above process.
+
+- CLEAN:  44 seconds
+- CTL:    20 seconds (but then glance needs 60s to come up)
+
+The above is with PVC=1 and IMG=OPER=0
