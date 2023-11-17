@@ -27,10 +27,37 @@ moved the glance-operator to
 so that when a glance pod is scaled, it automatically gets a new PVC
 which is bound to it.
 
-# Testing
+## Testing
 
-- Deploy Ceph as a backend
-- Deploy one Glance pair (internal/external) with Ceph RBD
-- Configure Glance with distributed image import
-- Scale Glance replicas to 3 and count PVCs
-- Import multiple qcow2 images and observe conversion to raw
+### Deployment
+
+After [minimal.sh](minimal.sh) has run and there are 0 glance pods,
+deploy Ceph.
+
+```
+pushd ~/install_yamls
+make ceph
+popd
+```
+
+Create a PVC to host a staging area.
+```
+oc create -f ~/glance-operator/config/samples/import_plugins/image_conversion/image_conversion_pvc.yaml
+```
+
+Deploy one Glance pair (internal/external) configured with a Ceph RBD
+backend and distributed image import using the
+[glance-ceph overlay](../crs/control_plane/overlay/glance-ceph).
+
+```
+pushd ~/antelope/crs/
+kustomize build control_plane/overlay/glance-ceph > control.yaml
+oc apply -f control.yaml
+popd
+```
+
+todo: Scale Glance replicas to 3 and count PVCs
+
+### Image Creation
+
+todo: Import multiple qcow2 images and observe conversion to raw

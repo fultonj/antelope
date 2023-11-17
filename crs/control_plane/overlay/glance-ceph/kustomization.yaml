@@ -1,0 +1,32 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: openstack
+resources:
+- ../../base/
+patchesStrategicMerge:
+- deployment.yaml
+patches:
+  - patch: |-
+      - op: replace
+        path: /spec/glance/template/glanceAPI/replicas
+        value: 1
+      - op: add
+        path: /spec/cinder/enabled
+        value: false
+      - op: add
+        path: /spec/neutron/enabled
+        value: false
+      - op: add
+        path: /spec/nova/enabled
+        value: false
+      - op: add
+        path: /spec/rabbitmq/enabled
+        value: false
+      - op: add
+        path: /spec/placement/enabled
+        value: false
+      - op: add
+        path: /spec/ovn/enabled
+        value: false
+    target:
+      kind: OpenStackControlPlane

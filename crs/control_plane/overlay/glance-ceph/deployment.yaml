@@ -1,0 +1,49 @@
+apiVersion: core.openstack.org/v1beta1
+kind: OpenStackControlPlane
+metadata:
+  name: openstack-galera-network-isolation
+  namespace: openstack
+spec:
+  extraMounts:
+    - name: v1
+      region: r1
+      extraVol:
+        - propagation:
+          - GlanceAPI
+          extraVolType: Ceph
+          volumes:
+          - name: ceph
+            projected:
+              sources:
+              - secret:
+                  name: ceph-conf-files
+          - name: image-import-staging-workspace
+            persistentVolumeClaim:
+              claimName: image-import-staging-workspace
+              readOnly: false
+          mounts:
+          - name: ceph
+            mountPath: "/etc/ceph"
+            readOnly: true
+          - name: image-import-staging-workspace
+            mountPath: /var/lib/glance/os_glance_staging_store/
+            readOnly: false
+  glance:
+    template:
+      glanceAPI:
+        type: split
+      customServiceConfig: |
+        [DEFAULT]
+        enabled_backends = default_backend:rbd
+        enabled_import_methods=[web-download,glance-direct]
+        [glance_store]
+        default_backend = default_backend
+        [default_backend]
+        rbd_store_ceph_conf = /etc/ceph/ceph.conf
+        store_description = "RBD backend"
+        rbd_store_pool = images
+        rbd_store_user = openstack
+        [image_import_opts]
+        image_import_plugins = ['image_conversion']
+        [image_conversion]
+        output_format = raw
