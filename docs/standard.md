@@ -101,7 +101,7 @@ oc create -f deployments/deployment-standard.yaml
 ```
 I then like to use the following to watch the playbooks:
 ```
-oc get pods -w | grep dataplane
+oc get pods -w -l app=openstackansibleee
 oc logs -f dataplane-deployment-configure-network-deployment-standardsvs8r
 ```
 
