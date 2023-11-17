@@ -8,3 +8,4 @@ My notes for working on the
 - [Run Glance kuttl tests](kuttl.md)
 - [Run Glance env tests](env_tests.md)
 - [Run a minimal control plane with Glance](minimal.md)
+- [Distributed Image Import](dist_import.md)
