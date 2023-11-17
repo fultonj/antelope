@@ -24,30 +24,13 @@ for the import PVC should be avoided because:
 [PR352](https://github.com/openstack-k8s-operators/glance-operator/pull/352)
 moved the glance-operator to 
 [StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset)
-so that the following happens.
+so that when a glance pod is scaled, it automatically gets a new PVC
+which is bound to it.
 
-One glance pod with on PVC:
-```
-$ oc get pods | grep glance
-glance-single-api-0                3/3     Running     0          22h
-$ oc get pvc | grep glance
-glance-glance-single-api-0          Bound     local-storage04-crc-lz7xw-master-0   10Gi       RWO,ROX,RWX    local-storage   22h
-$ 
-```
-Scale to three glance pods:
-```
-oc patch openstackcontrolplane openstack-galera-network-isolation \
-   --type merge -p '{"spec":{"glance":{"template":{"glanceAPI":{"replicas":3}}}}}'
-```
-Three glance pods where each has its own PVC:
-```
-$ oc get pods | grep glance
-glance-single-api-0                3/3     Running     0          22h
-glance-single-api-1                3/3     Running     0          20s
-glance-single-api-2                0/3     Running     0          9s
-$ oc get pvc | grep glance
-glance-glance-single-api-0          Bound     local-storage04-crc-lz7xw-master-0   10Gi       RWO,ROX,RWX    local-storage   22h
-glance-glance-single-api-1          Bound     local-storage10-crc-lz7xw-master-0   10Gi       RWO,ROX,RWX    local-storage   22h
-glance-glance-single-api-2          Bound     local-storage11-crc-lz7xw-master-0   10Gi       RWO,ROX,RWX    local-storage   22h
-$
-```
+# Testing
+
+- Deploy Ceph as a backend
+- Deploy one Glance pair (internal/external) with Ceph RBD
+- Configure Glance with distributed image import
+- Scale Glance replicas to 3 and count PVCs
+- Import multiple qcow2 images and observe conversion to raw
