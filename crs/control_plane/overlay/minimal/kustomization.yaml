@@ -5,10 +5,14 @@ namespace: openstack
 resources:
 - ../../base/
 
+# Ensure no glance pods are running yet
 # Disable five services unnecessary for Glance
 # Note: heat ceilometer horizon already disabled by deploy.sh
 patches:
   - patch: |-
+      - op: replace
+        path: /spec/glance/template/glanceAPI/replicas
+        value: 0
       - op: add
         path: /spec/cinder/enabled
         value: false

@@ -38,7 +38,8 @@ oc apply -f control.yaml
 popd
 ```
 
-If desired, use [replica.sh](replica.sh) to change glance's replica count.
+By default the minimal overlay sets glance replicas to 0 so use
+[replica.sh](replica.sh) to change glance's replica count.
 
 After Glance is deployed inspect the default configuration built by
 its operator.
