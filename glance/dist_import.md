@@ -27,23 +27,9 @@ moved the glance-operator to
 so that when a glance pod is scaled, it automatically gets a new PVC
 which is bound to it.
 
-## Testing
+## Deployment
 
-### Deployment
-
-After [minimal.sh](minimal.sh) has run and there are 0 glance pods,
-deploy Ceph.
-
-```
-pushd ~/install_yamls
-make ceph
-popd
-```
-
-Create a PVC to host a staging area.
-```
-oc create -f ~/glance-operator/config/samples/import_plugins/image_conversion/image_conversion_pvc.yaml
-```
+Deploy [minimal.sh](minimal.sh) with Ceph and 0 glance pods.
 
 Deploy one Glance pair (internal/external) configured with a Ceph RBD
 backend and distributed image import using the
@@ -55,8 +41,40 @@ kustomize build control_plane/overlay/glance-ceph > control.yaml
 oc apply -f control.yaml
 popd
 ```
-
-todo: Scale Glance replicas to 3 and count PVCs
+Observe glance pods and PVCs
+```
+[fultonj@hamfast crs{main}]$ oc get pods | grep glance
+glance-external-api-0         3/3     Running   0          8m7s
+glance-internal-api-0         3/3     Running   0          8m7s
+[fultonj@hamfast crs{main}]$ oc get pvc | grep glance
+glance-glance-external-api-0        Bound     local-storage04-crc-lz7xw-master-0   10Gi       RWO,ROX,RWX    local-storage   8m14s
+glance-glance-internal-api-0        Bound     local-storage01-crc-lz7xw-master-0   10Gi       RWO,ROX,RWX    local-storage   8m14s
+[fultonj@hamfast crs{main}]$
+```
+Scale Glance replicas:
+```
+[fultonj@hamfast glance{main}]$ ./replica.sh 3
+openstackcontrolplane.core.openstack.org/openstack-galera-network-isolation patched
+[fultonj@hamfast glance{main}]$
+```
+Observe new pods and PVCs:
+```
+[fultonj@hamfast glance{main}]$ oc get pods | grep glance
+glance-external-api-0         3/3     Running   0          9m18s
+glance-external-api-1         3/3     Running   0          22s
+glance-external-api-2         0/3     Running   0          10s
+glance-internal-api-0         3/3     Running   0          9m18s
+glance-internal-api-1         3/3     Running   0          22s
+glance-internal-api-2         0/3     Running   0          10s
+[fultonj@hamfast glance{main}]$ oc get pvc | grep glance
+glance-glance-external-api-0        Bound     local-storage04-crc-lz7xw-master-0   10Gi       RWO,ROX,RWX    local-storage   9m21s
+glance-glance-external-api-1        Bound     local-storage02-crc-lz7xw-master-0   10Gi       RWO,ROX,RWX    local-storage   25s
+glance-glance-external-api-2        Bound     local-storage08-crc-lz7xw-master-0   10Gi       RWO,ROX,RWX    local-storage   13s
+glance-glance-internal-api-0        Bound     local-storage01-crc-lz7xw-master-0   10Gi       RWO,ROX,RWX    local-storage   9m21s
+glance-glance-internal-api-1        Bound     local-storage07-crc-lz7xw-master-0   10Gi       RWO,ROX,RWX    local-storage   25s
+glance-glance-internal-api-2        Bound     local-storage06-crc-lz7xw-master-0   10Gi       RWO,ROX,RWX    local-storage   13s
+[fultonj@hamfast glance{main}]$
+```
 
 ### Image Creation
 
