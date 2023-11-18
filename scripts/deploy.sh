@@ -103,10 +103,14 @@ if [ $CONTROL -eq 1 ]; then
     DBSERVICE=galera make openstack_deploy_prep
     kustomize build out/openstack/openstack/cr > $TARGET
 
-    /usr/local/bin/yq -i '(.spec.swift.enabled)=false' $TARGET
-    /usr/local/bin/yq -i '(.spec.heat.enabled)=false' $TARGET
-    /usr/local/bin/yq -i '(.spec.ceilometer.enabled)=false' $TARGET
-    /usr/local/bin/yq -i '(.spec.horizon.enabled)=false' $TARGET
+    # disable unused services
+    yq -i '(.spec.swift.enabled)=false' $TARGET
+    yq -i '(.spec.heat.enabled)=false' $TARGET
+    yq -i '(.spec.ceilometer.enabled)=false' $TARGET
+    yq -i '(.spec.horizon.enabled)=false' $TARGET
+
+    # change default glance type from single to split
+    yq eval -i '.spec.glance.template.glanceAPI.type = "split"' $TARGET
 
     # The following will implicitly call 'make netconfig_deploy'
     NETCONFIG_CR=/tmp/netconfig.yaml OPENSTACK_CR=$TARGET make openstack_deploy
