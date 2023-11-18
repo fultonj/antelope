@@ -9,6 +9,8 @@ OPER=0
 IMG=0
 # (re)create PVCs?
 PVC=1
+# Toy Ceph Cluster?
+CEPH=1
 
 if [ $CLEAN -eq 1 ]; then
     pushd ~/install_yamls
@@ -29,6 +31,12 @@ if [ $CLEAN -eq 1 ]; then
         make crc_storage_cleanup
         make crc_storage_cleanup
         popd
+    fi
+    if [ $CEPH -eq 1 ]; then
+	pushd ~/install_yamls
+	make ceph_cleanup
+	popd
+	oc delete secret ceph-conf-files
     fi
     if [ $OPER -eq 1 ]; then
         echo "Removing Operators"
@@ -67,4 +75,10 @@ if [ $CTL -eq 1 ]; then
     kustomize build control_plane/overlay/minimal > control.yaml
     oc apply -f control.yaml
     popd
+
+    if [ $CEPH -eq 1 ]; then
+	pushd ~/install_yamls
+	make ceph
+	popd
+    fi
 fi
