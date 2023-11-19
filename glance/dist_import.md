@@ -43,37 +43,56 @@ popd
 ```
 Observe glance pods and PVCs
 ```
-[fultonj@hamfast crs{main}]$ oc get pods | grep glance
+$ oc get pods | grep glance
 glance-external-api-0         3/3     Running   0          8m7s
 glance-internal-api-0         3/3     Running   0          8m7s
-[fultonj@hamfast crs{main}]$ oc get pvc | grep glance
+$ oc get pvc | grep glance
 glance-glance-external-api-0        Bound     local-storage04-crc-lz7xw-master-0   10Gi       RWO,ROX,RWX    local-storage   8m14s
 glance-glance-internal-api-0        Bound     local-storage01-crc-lz7xw-master-0   10Gi       RWO,ROX,RWX    local-storage   8m14s
-[fultonj@hamfast crs{main}]$
+$
 ```
 Scale Glance replicas:
 ```
-[fultonj@hamfast glance{main}]$ ./replica.sh 3
-openstackcontrolplane.core.openstack.org/openstack-galera-network-isolation patched
-[fultonj@hamfast glance{main}]$
+oc patch openstackcontrolplane openstack-galera-network-isolation \
+  --type merge -p '{"spec":{"glance":{"template":{"glanceAPI":{"replicas":3}}}}}'
 ```
 Observe new pods and PVCs:
 ```
-[fultonj@hamfast glance{main}]$ oc get pods | grep glance
+$ oc get pods | grep glance
 glance-external-api-0         3/3     Running   0          9m18s
 glance-external-api-1         3/3     Running   0          22s
 glance-external-api-2         0/3     Running   0          10s
 glance-internal-api-0         3/3     Running   0          9m18s
 glance-internal-api-1         3/3     Running   0          22s
 glance-internal-api-2         0/3     Running   0          10s
-[fultonj@hamfast glance{main}]$ oc get pvc | grep glance
+$ oc get pvc | grep glance
 glance-glance-external-api-0        Bound     local-storage04-crc-lz7xw-master-0   10Gi       RWO,ROX,RWX    local-storage   9m21s
 glance-glance-external-api-1        Bound     local-storage02-crc-lz7xw-master-0   10Gi       RWO,ROX,RWX    local-storage   25s
 glance-glance-external-api-2        Bound     local-storage08-crc-lz7xw-master-0   10Gi       RWO,ROX,RWX    local-storage   13s
 glance-glance-internal-api-0        Bound     local-storage01-crc-lz7xw-master-0   10Gi       RWO,ROX,RWX    local-storage   9m21s
 glance-glance-internal-api-1        Bound     local-storage07-crc-lz7xw-master-0   10Gi       RWO,ROX,RWX    local-storage   25s
 glance-glance-internal-api-2        Bound     local-storage06-crc-lz7xw-master-0   10Gi       RWO,ROX,RWX    local-storage   13s
-[fultonj@hamfast glance{main}]$
+$
+```
+The import staging area default is
+`/var/lib/glance/os_glance_staging_store/` and
+the PVCs are mounted into `/var/lib/glance` so
+each staging area will be unique per pod and
+backed by each PVC.
+```
+$ oc get pod glance-external-api-0 -o yaml
+...
+    volumeMounts:
+	...
+    - mountPath: /var/lib/glance
+      name: glance
+  ...
+  volumes:
+  - name: glance
+    persistentVolumeClaim:
+      claimName: glance-glance-external-api-0
+...
+$
 ```
 
 ### Image Creation
