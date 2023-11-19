@@ -95,6 +95,18 @@ $ oc get pod glance-external-api-0 -o yaml
 $
 ```
 
-### Image Creation
+### Test image import conversion from qcow2 to raw
 
-todo: Import multiple qcow2 images and observe conversion to raw
+Use [cmd-glances.sh](cmd-glances.sh) to see that `/var/lib/glance/` is
+empty by default.
+
+```
+$ ./cmd-glances.sh ls -l /var/lib/glance/
+> glance-external-api-0 ls -l /var/lib/glance/
+total 0
+> glance-external-api-1 ls -l /var/lib/glance/
+total 0
+> glance-external-api-2 ls -l /var/lib/glance/
+total 0
+$
+```
