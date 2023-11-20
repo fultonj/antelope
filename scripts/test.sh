@@ -22,6 +22,7 @@ SSH=0
 PET=0
 RGW=0
 MANILA=0
+TOYCEPH=0
 
 # node0
 NODES=0
@@ -42,7 +43,11 @@ if [ $OVERVIEW -eq 1 ]; then
 fi
 
 function run_on_mon {
-    $(bash ssh_node.sh) "sudo cephadm shell -- $1" 2> /dev/null
+    if [ $TOYCEPH -eq 1 ]; then
+        oc rsh -t --shell='/bin/sh' ceph $1
+    else
+        $(bash ssh_node.sh) "sudo cephadm shell -- $1" 2> /dev/null
+    fi
 }
 
 if [ $GLANCE -eq 1 ]; then
