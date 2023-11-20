@@ -29,6 +29,7 @@ spec:
         [DEFAULT]
         enabled_backends = default_backend:rbd
         enabled_import_methods=[web-download,glance-direct]
+        worker_self_reference_url = http://glance-internal.openstack.svc:9292
         [glance_store]
         default_backend = default_backend
         [default_backend]
