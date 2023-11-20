@@ -27,6 +27,9 @@ moved the glance-operator to
 so that when a glance pod is scaled, it automatically gets a new PVC
 which is bound to it.
 
+If the Ceph RBD backend is enabled for Glance, then the
+`image_conversion` plugin should be enabled.
+
 ## Deployment
 
 Deploy [minimal.sh](minimal.sh) with Ceph and 0 glance pods.
@@ -41,6 +44,18 @@ kustomize build control_plane/overlay/glance-ceph > control.yaml
 oc apply -f control.yaml
 popd
 ```
+Observe the configuration put in place by the `customServiceConfig`
+from the
+[glance-ceph overlay deployment.yaml](https://github.com/fultonj/antelope/blob/main/crs/control_plane/overlay/glance-ceph/deployment.yaml)
+
+```
+oc get secret glance-config-data -o json | jq -r '.data."01-config.conf"' | base64 -d
+```
+
+The `worker_self_reference_url` should be set to the internal API URL
+for each node where glance api will run
+[as was the case for TripleO](https://review.opendev.org/c/openstack/tripleo-heat-templates/+/882391).
+
 Observe glance pods and PVCs
 ```
 $ oc get pods | grep glance
@@ -74,9 +89,10 @@ glance-glance-internal-api-1        Bound     local-storage07-crc-lz7xw-master-0
 glance-glance-internal-api-2        Bound     local-storage06-crc-lz7xw-master-0   10Gi       RWO,ROX,RWX    local-storage   13s
 $
 ```
-The import staging area default is
-`/var/lib/glance/os_glance_staging_store/` and
-the PVCs are mounted into `/var/lib/glance` so
+The import staging area is set to
+`/var/lib/glance/os_glance_staging_store/` via the
+[glance-ceph overlay](../crs/control_plane/overlay/glance-ceph).
+The PVCs are mounted into `/var/lib/glance`, so
 each staging area will be unique per pod and
 backed by each PVC.
 ```
@@ -110,3 +126,12 @@ total 0
 total 0
 $
 ```
+Import the image.
+```
+openstack image create \
+   --container-format bare \
+   --disk-format raw \
+   --file cirros.qcow2 \
+   --import
+```
+...
