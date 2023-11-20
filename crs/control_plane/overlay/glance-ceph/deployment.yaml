@@ -36,6 +36,8 @@ spec:
         store_description = "RBD backend"
         rbd_store_pool = images
         rbd_store_user = openstack
+        [os_glance_staging_store]
+        filesystem_store_datadir = /var/lib/glance/os_glance_staging_store
         [image_import_opts]
         image_import_plugins = ['image_conversion']
         [image_conversion]
