@@ -51,6 +51,7 @@ from the
 ```
 oc get secret glance-config-data -o json | jq -r '.data."01-config.conf"' | base64 -d
 ```
+Use [conf-glance.sh](conf-glance.sh) to view all of the content in `glance-config-data`.
 
 The `worker_self_reference_url` should be set to the internal API URL
 for each node where glance api will run
