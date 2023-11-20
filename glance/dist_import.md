@@ -49,13 +49,23 @@ from the
 [glance-ceph overlay deployment.yaml](https://github.com/fultonj/antelope/blob/main/crs/control_plane/overlay/glance-ceph/deployment.yaml)
 
 ```
-oc get secret glance-config-data -o json | jq -r '.data."01-config.conf"' | base64 -d
+oc get secret glance-external-config-data -o json | jq -r '.data."02-config.conf"' | base64 -d
 ```
-Use [conf-glance.sh](conf-glance.sh) to view all of the content in `glance-config-data`.
+
+Use [conf-glance.sh](conf-glance.sh) to view all of the content in `glance-external-config-data`.
 
 The `worker_self_reference_url` should be set to the internal API URL
-for each node where glance api will run
-[as was the case for TripleO](https://review.opendev.org/c/openstack/tripleo-heat-templates/+/882391).
+for each node where Glance API will run
+[as was the case for TripleO](https://review.opendev.org/c/openstack/tripleo-heat-templates/+/882391). By
+[glance-ceph overlay deployment.yaml](https://github.com/fultonj/antelope/blob/main/crs/control_plane/overlay/glance-ceph/deployment.yaml)
+it is currently set to the internal API Endpoint of the Glance
+service.
+```
+$ oc describe glance glance | grep 'API Endpoint' -A 1
+  API Endpoint:
+    Internal:  http://glance-internal.openstack.svc:9292
+$
+```
 
 Observe glance pods and PVCs
 ```
