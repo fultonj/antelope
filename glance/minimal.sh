@@ -79,6 +79,9 @@ if [ $CTL -eq 1 ]; then
     if [ $CEPH -eq 1 ]; then
 	pushd ~/install_yamls
 	make ceph
+        if [[ $? -gt 0 ]]; then
+            make ceph
+        fi
 	popd
     fi
 fi
