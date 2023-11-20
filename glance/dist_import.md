@@ -125,6 +125,23 @@ $
 
 ### Test image import conversion from qcow2 to raw
 
+Create aliases.
+```
+openstack() {
+    oc rsh -t --shell='/bin/sh' openstackclient openstack $@
+}
+
+rbd() {
+    oc rsh -t --shell='/bin/sh' ceph rbd $@
+}
+
+glance() {
+    oc rsh -t --shell='/bin/sh' openstackclient glance --os-auth-url https://keystone-public-openstack.apps-crc.testing --os-project-name admin --os-username admin --os-password 12345678 --os-user-domain-name default --os-project-domain-name default $@
+}
+```
+The values for the `glance` alias come from
+`.config/openstack/clouds.yaml` inside opentsackclient.
+
 Use [cmd-glances.sh](cmd-glances.sh) to see that `/var/lib/glance/` is
 empty by default.
 
@@ -138,12 +155,118 @@ total 0
 total 0
 $
 ```
+
+Todo: additional testing
+
 Import the image.
 ```
 openstack image create \
    --container-format bare \
-   --disk-format raw \
-   --file cirros.qcow2 \
+   --disk-format qcow2 \
+   --file cirros-0.5.2-x86_64-disk.img \
    --import
 ```
-...
+
+
+### Test web-download
+
+Import the image using the `--uri`.
+```
+[fultonj@hamfast glance{main}]$ glance --verbose image-create-via-import --disk-format qcow2 --container-format bare --name cirros --uri http://download.cirros-cloud.net/0.4.0/cirros-0.4.0-x86_64-disk.img --import-method web-download
++-----------------------+--------------------------------------+
+| Property              | Value                                |
++-----------------------+--------------------------------------+
+| checksum              | None                                 |
+| container_format      | bare                                 |
+| created_at            | 2023-11-20T22:29:26Z                 |
+| disk_format           | qcow2                                |
+| id                    | 79fc5093-8b8d-4b3f-9b72-7342253374d6 |
+| min_disk              | 0                                    |
+| min_ram               | 0                                    |
+| name                  | cirros                               |
+| os_glance_import_task | b55cbe91-95a8-4a24-9cd2-e4367c3181d3 |
+| os_hash_algo          | None                                 |
+| os_hash_value         | None                                 |
+| os_hidden             | False                                |
+| owner                 | 8de96860a2b34858b0e41da848b1a910     |
+| protected             | False                                |
+| size                  | None                                 |
+| status                | queued                               |
+| tags                  | []                                   |
+| updated_at            | 2023-11-20T22:29:26Z                 |
+| virtual_size          | Not available                        |
+| visibility            | shared                               |
++-----------------------+--------------------------------------+
+[fultonj@hamfast glance{main}]$ 
+```
+
+Observe that the qcow2 file was converted to raw four seconds 
+(created_at vs updated_at) after creation.
+
+```
+[fultonj@hamfast glance{main}]$ glance image-show 79fc5093-8b8d-4b3f-9b72-7342253374d6
++-------------------------------+----------------------------------------------------------------------------------+
+| Property                      | Value                                                                            |
++-------------------------------+----------------------------------------------------------------------------------+
+| checksum                      | ba3cd24377dde5dfdd58728894004abb                                                 |
+| container_format              | bare                                                                             |
+| created_at                    | 2023-11-20T22:29:26Z                                                             |
+| disk_format                   | raw                                                                              |
+| id                            | 79fc5093-8b8d-4b3f-9b72-7342253374d6                                             |
+| min_disk                      | 0                                                                                |
+| min_ram                       | 0                                                                                |
+| name                          | cirros                                                                           |
+| os_glance_failed_import       |                                                                                  |
+| os_glance_importing_to_stores |                                                                                  |
+| os_hash_algo                  | sha512                                                                           |
+| os_hash_value                 | b795f047a1b10ba0b7c95b43b2a481a59289dc4cf2e49845e60b194a911819d3ada03767bbba4143 |
+|                               | b44c93fd7f66c96c5a621e28dff51d1196dae64974ce240e                                 |
+| os_hidden                     | False                                                                            |
+| owner                         | 8de96860a2b34858b0e41da848b1a910                                                 |
+| protected                     | False                                                                            |
+| size                          | 46137344                                                                         |
+| status                        | active                                                                           |
+| stores                        | default_backend                                                                  |
+| tags                          | []                                                                               |
+| updated_at                    | 2023-11-20T22:29:30Z                                                             |
+| virtual_size                  | 46137344                                                                         |
+| visibility                    | shared                                                                           |
++-------------------------------+----------------------------------------------------------------------------------+
+[fultonj@hamfast glance{main}]$ 
+```
+Observe from the `properties` that the image did not fail import.
+```
+[fultonj@hamfast glance{main}]$ openstack image show cirros
++------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Field            | Value                                                                                                                                                                                                                                                                              |
++------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| checksum         | ba3cd24377dde5dfdd58728894004abb                                                                                                                                                                                                                                                   |
+| container_format | bare                                                                                                                                                                                                                                                                               |
+| created_at       | 2023-11-20T22:29:26Z                                                                                                                                                                                                                                                               |
+| disk_format      | raw                                                                                                                                                                                                                                                                                |
+| file             | /v2/images/79fc5093-8b8d-4b3f-9b72-7342253374d6/file                                                                                                                                                                                                                               |
+| id               | 79fc5093-8b8d-4b3f-9b72-7342253374d6                                                                                                                                                                                                                                               |
+| min_disk         | 0                                                                                                                                                                                                                                                                                  |
+| min_ram          | 0                                                                                                                                                                                                                                                                                  |
+| name             | cirros                                                                                                                                                                                                                                                                             |
+| owner            | 8de96860a2b34858b0e41da848b1a910                                                                                                                                                                                                                                                   |
+| properties       | os_glance_failed_import='', os_glance_importing_to_stores='', os_hash_algo='sha512', os_hash_value='b795f047a1b10ba0b7c95b43b2a481a59289dc4cf2e49845e60b194a911819d3ada03767bbba4143b44c93fd7f66c96c5a621e28dff51d1196dae64974ce240e', os_hidden='False', stores='default_backend' |
+| protected        | False                                                                                                                                                                                                                                                                              |
+| schema           | /v2/schemas/image                                                                                                                                                                                                                                                                  |
+| size             | 46137344                                                                                                                                                                                                                                                                           |
+| status           | active                                                                                                                                                                                                                                                                             |
+| tags             |                                                                                                                                                                                                                                                                                    |
+| updated_at       | 2023-11-20T22:29:30Z                                                                                                                                                                                                                                                               |
+| virtual_size     | 46137344                                                                                                                                                                                                                                                                           |
+| visibility       | shared                                                                                                                                                                                                                                                                             |
++------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+[fultonj@hamfast glance{main}]$ 
+```
+Observe that the image is tored in Ceph at 44 MiB.
+```
+[fultonj@hamfast glance{main}]$ rbd ls -l images
+NAME                                       SIZE    PARENT  FMT  PROT  LOCK
+79fc5093-8b8d-4b3f-9b72-7342253374d6       44 MiB            2
+79fc5093-8b8d-4b3f-9b72-7342253374d6@snap  44 MiB            2  yes
+[fultonj@hamfast glance{main}]$
+```
