@@ -100,9 +100,10 @@ glance-glance-internal-api-1        Bound     local-storage07-crc-lz7xw-master-0
 glance-glance-internal-api-2        Bound     local-storage06-crc-lz7xw-master-0   10Gi       RWO,ROX,RWX    local-storage   13s
 $
 ```
-The import staging area is set to
-`/var/lib/glance/os_glance_staging_store/` via the
-[glance-ceph overlay](../crs/control_plane/overlay/glance-ceph).
+The import staging area
+[defaults](https://github.com/openstack-k8s-operators/glance-operator/blob/25683ec68a7f6b0c5001a68d9a153e0aadb41886/templates/glance/config/00-config.conf#L88)
+to
+`/var/lib/glance/os_glance_staging_store/`.
 The PVCs are mounted into `/var/lib/glance`, so
 each staging area will be unique per pod and
 backed by each PVC.
