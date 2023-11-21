@@ -1,7 +1,7 @@
 #!/bin/bash
 
-SVC=glance-external
-#SVC=glance-internal
+SVC=${SVC:-"glance-internal"}
+#SVC=glance-external
 #SVC=glance-single
 
 if [[ -z $@ ]]; then
