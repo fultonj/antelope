@@ -130,32 +130,6 @@ Define [bash functions](bash-functions.sh) so you can run `glance`,
 ```
 source bash-functions.sh
 ```
-Use [cmd-glances.sh](cmd-glances.sh) to see that `/var/lib/glance/` is
-empty by default.
-```
-$ ./cmd-glances.sh ls -l /var/lib/glance/
-> glance-external-api-0 ls -l /var/lib/glance/
-total 0
-> glance-external-api-1 ls -l /var/lib/glance/
-total 0
-> glance-external-api-2 ls -l /var/lib/glance/
-total 0
-$
-```
-
-Todo: additional testing
-
-Import the image.
-```
-openstack image create \
-   --container-format bare \
-   --disk-format qcow2 \
-   --file cirros-0.5.2-x86_64-disk.img \
-   --import
-```
-
-### Test web-download
-
 Import the image using the `--uri`.
 ```
 [fultonj@hamfast glance{main}]$ glance --verbose image-create-via-import --disk-format qcow2 --container-format bare --name cirros --uri http://download.cirros-cloud.net/0.4.0/cirros-0.4.0-x86_64-disk.img --import-method web-download
@@ -248,7 +222,7 @@ Observe from the `properties` that the image did not fail import.
 +------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 [fultonj@hamfast glance{main}]$ 
 ```
-Observe that the image is tored in Ceph at 44 MiB.
+Observe that the image is stored in Ceph at 44 MiB.
 ```
 [fultonj@hamfast glance{main}]$ rbd ls -l images
 NAME                                       SIZE    PARENT  FMT  PROT  LOCK
@@ -256,3 +230,34 @@ NAME                                       SIZE    PARENT  FMT  PROT  LOCK
 79fc5093-8b8d-4b3f-9b72-7342253374d6@snap  44 MiB            2  yes
 [fultonj@hamfast glance{main}]$
 ```
+I used [test-import.sh](test-import.sh) to repeat the above test many
+times.
+
+With the logs in debug mode I see the following:
+```
+$ export SVC=glance-external
+$ ./logs-glances.sh -f
+...
+2023-11-21 19:49:09.277 46 DEBUG glance.async_.taskflow_executor [-] Task 'api_image_import-Convert_Image-f6378601-64a4-456b-a98e-ab00d932db62' (3a0441a1-ae3f-4e8d-b7dc-7bede13c0858) transitioned into state 'RUNNING' from state 'PENDING' _task_receiver /usr/lib/python3.9/site-packages/taskflow/listeners/logging.py:190
+...
+2023-11-21 19:49:09.337 46 DEBUG oslo_concurrency.processutils [-] Running cmd (subprocess): qemu-img convert -f qcow2 -O raw /var/lib/glance/os_glance_staging_store/9bca6d1b-95f7-4b22-ac67-0cccd9d83ee5 /var/lib/glance/os_glance_staging_store/9bca6d1b-95f7-4b22-ac67-0cccd9d83ee5.raw execute /usr/lib/python3.9/site-packages/oslo_concurrency/processutils.py:384
+...
+2023-11-21 19:49:09.391 46 DEBUG oslo_concurrency.processutils [-] CMD "qemu-img convert -f qcow2 -O raw /var/lib/glance/os_glance_staging_store/9bca6d1b-95f7-4b22-ac67-0cccd9d83ee5 /var/lib/glance/os_glance_staging_store/9bca6d1b-95f7-4b22-ac67-0cccd9d83ee5.raw" returned: 0 in 0.055s execute /usr/lib/python3.9/site-packages/oslo_concurrency/processutils.py:422
+...
+2023-11-21 19:49:09.392 46 INFO glance.async_.flows.plugins.image_conversion [-] Updated image 9bca6d1b-95f7-4b22-ac67-0cccd9d83ee5 size=117440512 disk_format=raw
+
+2023-11-21 19:49:09.484 46 WARNING glance_store._drivers.rbd [-] Since image size is zero we will be doing resize-before-write which will be slower than normal
+2023-11-21 19:49:09.565 46 DEBUG glance_store._drivers.rbd [-] resizing image to 8192.0 KiB _resize_on_write /usr/lib/python3.9/site-packages/glance_store/_drivers/rbd.py:523
+2023-11-21 19:49:09.843 46 DEBUG glance_store._drivers.rbd [-] resizing image to 24576.0 KiB _resize_on_write /usr/lib/python3.9/site-packages/glance_store/_drivers/rbd.py:523
+2023-11-21 19:49:10.272 46 DEBUG glance_store._drivers.rbd [-] resizing image to 57344.0 KiB _resize_on_write /usr/lib/python3.9/site-packages/glance_store/_drivers/rbd.py:523
+2023-11-21 19:49:11.159 46 DEBUG glance_store._drivers.rbd [-] resizing image to 122880.0 KiB _resize_on_write /usr/lib/python3.9/site-packages/glance_store/_drivers/rbd.py:523
+
+```
+As per the logs the following command is run:
+```
+qemu-img convert -f qcow2 -O raw
+  /var/lib/glance/os_glance_staging_store/9bca6d1b-95f7-4b22-ac67-0cccd9d83ee5 \
+  /var/lib/glance/os_glance_staging_store/9bca6d1b-95f7-4b22-ac67-0cccd9d83ee5.raw
+```
+
+I see the image is correctly imported and converted.
