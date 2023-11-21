@@ -125,26 +125,13 @@ $
 
 ### Test image import conversion from qcow2 to raw
 
-Create aliases.
+Define [bash functions](bash-functions.sh) so you can run `glance`,
+`openstack`, `rbd` and `ceph` commands from the hypervisor.
 ```
-openstack() {
-    oc rsh -t --shell='/bin/sh' openstackclient openstack $@
-}
-
-rbd() {
-    oc rsh -t --shell='/bin/sh' ceph rbd $@
-}
-
-glance() {
-    oc rsh -t --shell='/bin/sh' openstackclient glance --os-auth-url https://keystone-public-openstack.apps-crc.testing --os-project-name admin --os-username admin --os-password 12345678 --os-user-domain-name default --os-project-domain-name default $@
-}
+source bash-functions.sh
 ```
-The values for the `glance` alias come from
-`.config/openstack/clouds.yaml` inside opentsackclient.
-
 Use [cmd-glances.sh](cmd-glances.sh) to see that `/var/lib/glance/` is
 empty by default.
-
 ```
 $ ./cmd-glances.sh ls -l /var/lib/glance/
 > glance-external-api-0 ls -l /var/lib/glance/
@@ -166,7 +153,6 @@ openstack image create \
    --file cirros-0.5.2-x86_64-disk.img \
    --import
 ```
-
 
 ### Test web-download
 
