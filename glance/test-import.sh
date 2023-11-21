@@ -2,7 +2,9 @@
 source bash-functions.sh
 
 CLEAN=1
-NAME=cirros
+
+NAME=cirros-$(date +%s)
+#NAME=cirros
 CIR=cirros-0.5.2-x86_64-disk.img
 URL=http://download.cirros-cloud.net/0.5.2/$CIR
 
