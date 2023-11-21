@@ -1,7 +1,7 @@
 #!/bin/bash
 
-SVC=${SVC:-"glance-internal"}
-#SVC=glance-external
+SVC=${SVC:-"glance-external"}
+#SVC=glance-internal
 #SVC=glance-single
 
 i=0
