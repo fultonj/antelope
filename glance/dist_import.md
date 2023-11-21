@@ -261,3 +261,66 @@ qemu-img convert -f qcow2 -O raw
 ```
 
 I see the image is correctly imported and converted.
+
+### Observe Import tasks
+
+Observe the log of tasks run to import an image.
+```
+[fultonj@hamfast glance{main}]$ glance task-list
++--------------------------------------+------------------+---------+----------------------------------+
+| ID                                   | Type             | Status  | Owner                            |
++--------------------------------------+------------------+---------+----------------------------------+
+| 8ef3acee-e5bd-4649-ba7e-dae5c2353420 | api_image_import | success | 6b449bc48de9428ca41c28739b70fd1f |
+...
+| 321534fa-c5da-45d7-8dd5-636c22e8cf4e | api_image_import | success | 6b449bc48de9428ca41c28739b70fd1f |
++--------------------------------------+------------------+---------+----------------------------------+
+```
+This task is from when [test-import.sh](test-import.sh) is used
+with `GLANCE_CLI=0` and `WEB=0`
+```
+[fultonj@hamfast glance{main}]$ glance task-show 8ef3acee-e5bd-4649-ba7e-dae5c2353420
++------------+----------------------------------------------------------------------------------+
+| Property   | Value                                                                            |
++------------+----------------------------------------------------------------------------------+
+| created_at | 2023-11-21T22:15:34Z                                                             |
+| expires_at | 2023-11-23T22:15:35Z                                                             |
+| id         | 8ef3acee-e5bd-4649-ba7e-dae5c2353420                                             |
+| image_id   | ffdd548e-e028-4bd8-a158-230ce2fc1a4a                                             |
+| input      | {"image_id": "ffdd548e-e028-4bd8-a158-230ce2fc1a4a", "import_req": {"method":    |
+|            | {"name": "glance-direct"}}, "backend": ["default_backend"]}                      |
+| message    | Copied 0 MiB                                                                     |
+| owner      | 6b449bc48de9428ca41c28739b70fd1f                                                 |
+| request_id | req-7d80cf93-a90f-42cd-abc3-87adc2dde271                                         |
+| result     | {"image_id": "ffdd548e-e028-4bd8-a158-230ce2fc1a4a"}                             |
+| status     | success                                                                          |
+| type       | api_image_import                                                                 |
+| updated_at | 2023-11-21T22:15:35Z                                                             |
+| user_id    | 0d4040d6ce5d40fdb1739abdb23e798c                                                 |
++------------+----------------------------------------------------------------------------------+
+[fultonj@hamfast glance{main}]$
+```
+This task is from when [test-import.sh](test-import.sh) is used
+with `WEB=1`.
+```
+[fultonj@hamfast glance{main}]$ glance task-show 321534fa-c5da-45d7-8dd5-636c22e8cf4e
++------------+----------------------------------------------------------------------------------+
+| Property   | Value                                                                            |
++------------+----------------------------------------------------------------------------------+
+| created_at | 2023-11-21T18:59:21Z                                                             |
+| expires_at | 2023-11-23T18:59:28Z                                                             |
+| id         | 321534fa-c5da-45d7-8dd5-636c22e8cf4e                                             |
+| image_id   | b73875c3-7186-4a8e-8d84-def508f57304                                             |
+| input      | {"image_id": "b73875c3-7186-4a8e-8d84-def508f57304", "import_req": {"method":    |
+|            | {"name": "web-download", "uri": "http://download.cirros-                         |
+|            | cloud.net/0.5.2/cirros-0.5.2-x86_64-disk.img"}}, "backend": ["default_backend"]} |
+| message    | Copied 112 MiB                                                                   |
+| owner      | 6b449bc48de9428ca41c28739b70fd1f                                                 |
+| request_id | req-5cd8a4de-85ae-4161-9c06-f51f9d951a63                                         |
+| result     | {"image_id": "b73875c3-7186-4a8e-8d84-def508f57304"}                             |
+| status     | success                                                                          |
+| type       | api_image_import                                                                 |
+| updated_at | 2023-11-21T18:59:28Z                                                             |
+| user_id    | 0d4040d6ce5d40fdb1739abdb23e798c                                                 |
++------------+----------------------------------------------------------------------------------+
+[fultonj@hamfast glance{main}]$
+```
