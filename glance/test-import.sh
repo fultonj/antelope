@@ -23,20 +23,20 @@ else
     if [ $? -gt 0 ]; then
         oc rsh -t --shell='/bin/sh' openstackclient curl $URL -o $CIR
     fi
-fi
-if [ $GLANCE_CLI -gt 0 ]; then
-    glance --verbose image-create-via-import \
-              --disk-format raw \
-              --container-format bare \
-              --name $NAME \
-              --file $CIR \
-              --import-method glance-direct
-else
-    openstack image create \
-              --disk-format raw \
-              --container-format bare \
-              --file $CIR \
-              --import $NAME
+    if [ $GLANCE_CLI -gt 0 ]; then
+        glance --verbose image-create-via-import \
+               --disk-format raw \
+               --container-format bare \
+               --name $NAME \
+               --file $CIR \
+               --import-method glance-direct
+    else
+        openstack image create \
+                  --disk-format raw \
+                  --container-format bare \
+                  --file $CIR \
+                  --import $NAME
+    fi
 fi
 
 until $(openstack image show $NAME -c status -f value | grep -q active); do
