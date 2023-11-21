@@ -15,7 +15,7 @@ if [ $i -eq 0 ]; then
     echo "No pods were found matching $SVC"
     exit 0
 fi
-if [ $i -gt 0 ]; then
+if [ $i -gt 1 ]; then
     read -p "Select the pod by number, (e.g. '0' for ${SVC}-api-0) " NUM
 else
     echo "There's only one POD so taking it"
