@@ -102,6 +102,33 @@ endpoint. Instead the operator should be setting the IP and port for
 each Glance pod. It's assumed that the pods can communicate with each
 other on the same internal API network.
 
+As described in
+[the worker_self_reference_url commit](https://opendev.org/openstack/glance/commit/41e1cecbe63c778ce8e92519993c61588ea1f0cb)
+
+> [!NOTE]
+> When an image was staged on another worker, that worker may record its
+> worker_self_reference_url on the image, indicating that other workers
+> should proxy requests to it while the image is staged. This method
+> replays our current request against the remote host, returns the
+> result, and performs any response error translation required.
+
+This solution is based on a deployment where one container is the same
+as one deployment but as the glance-operator is currently written that
+is not the case. The stateful set shares the IP. The output `oc
+describe pod glance-external-api-` will confirm this for the storage
+IP (though we want the internal API IP). After
+[this patch](https://github.com/openstack-k8s-operators/glance-operator/compare/main...fmount:glance-operator:list_of_glanceapi).
+merges though, glance api0 and api1 will be two diff statefulsets
+backed by two different services. The following will be two different
+services with two different end points.
+
+- glance-api0-{internal,external} --> glance-api0-internal.openstack.svc:9292
+- glance-api1-{internal,external} --> glance-api1-internal.openstack.svc:9292
+
+We can then have the glance-operator dynamically set the
+`worker_self_reference_url` to the service endpoint for each
+stateful set.
+
 ## Replicas and PVCs
 
 Observe glance pods and PVCs
@@ -164,6 +191,30 @@ The glance external logs in debug mode show the following:
 2023-11-21 18:10:29.168 1 INFO glance_store._drivers.filesystem [-]
 Directory to write image files does not exist (/var/lib/glance/os_glance_staging_store/). Creating.
 ```
+
+You can confirm this directory is created in the `glance-api`
+container in the `glance-external-api-0` pod.
+
+```
+[fultonj@hamfast ~]$ oc rsh -c glance-api glance-external-api-0
+sh-5.1# ls /var/lib/glance/
+os_glance_staging_store  os_glance_tasks_store
+sh-5.1# 
+exit
+[fultonj@hamfast ~]$ 
+```
+There are three containers in the `glance-external-api-0` pods. If you
+don't specify the container with `-c` you'll get see inside the first
+pod, `glance-log` which doesn't have this directory.
+```
+[fultonj@hamfast ~]$ for POD in $(oc get pods glance-external-api-0 -o jsonpath='{.spec.containers[*].name}'); do echo $POD; done
+glance-log
+glance-httpd
+glance-api
+[fultonj@hamfast ~]$ 
+```
+Use `oc describe pod glance-external-api-` to see other details about
+what is in the pod.
 
 ## Test image staging and conversion during import
 
