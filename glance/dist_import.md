@@ -58,16 +58,49 @@ Use [conf-glance.sh](conf-glance.sh) to view all of the content in `glance-exter
 
 The `worker_self_reference_url` should be set to the internal API URL
 for each node where Glance API will run
-[as was the case for TripleO](https://review.opendev.org/c/openstack/tripleo-heat-templates/+/882391). By
+[as was the case for
+TripleO](https://review.opendev.org/c/openstack/tripleo-heat-templates/+/882391).
+
+For now,
 [glance-ceph overlay deployment.yaml](https://github.com/fultonj/antelope/blob/main/crs/control_plane/overlay/glance-ceph/deployment.yaml)
-it is currently set to the internal API Endpoint of the Glance
-service.
+sets it to the internal API Endpoint of the Glance service.
 ```
 $ oc describe glance glance | grep 'API Endpoint' -A 1
   API Endpoint:
     Internal:  http://glance-internal.openstack.svc:9292
 $
 ```
+However, as per the
+[Staging Directory Configuration](https://docs.openstack.org/glance/latest/admin/interoperable-image-import.html#staging-directory-configuration):
+
+> [!NOTE]
+> If local storage is chosen, you must configure each worker with the
+> URL by which the other workers can reach it directly. This allows
+> one worker behind a load balancer to stage an image in one request,
+> and another worker to handle the subsequent import request. As an
+> example:
+> ```
+> [DEFAULTS]
+> worker_self_reference_url = https://glance01.example.com:8000
+> ```
+> This assumes you have several glance-api workers named glance01,
+> glance02, etc behind your load balancer.
+>
+> Note that public_endpoint will be used as the default if
+> `worker_self_reference_url` is not set. As this will generally be
+> set to the same value across all workers, the result is that all
+> workers will assume the same identity and thus revert to
+> shared-staging behavior.
+>
+> If public_endpoint is set differently for one or a group of workers,
+> they will be considered isolated and thus not sharing staging
+> storage.
+
+Because we are avoiding shared-staging behavior, we should not be
+setting the `worker_self_reference_url` to the load balanced SVC
+endpoint. Instead the operator should be setting the IP and port for
+each Glance pod. It's assumed that the pods can communicate with each
+other on the same internal API network.
 
 ## Replicas and PVCs
 
