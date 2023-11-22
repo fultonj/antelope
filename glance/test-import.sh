@@ -2,14 +2,15 @@
 source functions.sh
 
 CLEAN=1
-WEB=0
-GLANCE_CLI=1
-PHASED=1
+WEB=1
+GLANCE_CLI=0
+PHASED=0
 
 NAME=cirros-$(date +%s)
 CIR=cirros-0.5.2-x86_64-disk.img
 URL=http://download.cirros-cloud.net/0.5.2/$CIR
-STAGE_PATH=/var/lib/glance/{os_glance_staging_store,os_glance_tasks_store}
+STAGE_PATH=/var/lib/glance/os_glance_staging_store
+TASK_PATH=/var/lib/glance/os_glance_tasks_store
 
 rbd -p images ls -l
 if [ $? -gt 0 ]; then
@@ -37,7 +38,8 @@ else
 		   --name $NAME
 	    ID=$(openstack image show $NAME -c id -f value | strings)
 	    glance image-stage --progress --file $CIR $ID
-	    bash cmd-glances.sh ls -l $STAGE_PATH
+	    bash cmd-glances.sh ls -lh $STAGE_PATH
+	    bash cmd-glances.sh ls -lh $TASK_PATH
 	    glance image-import --import-method glance-direct $ID
 	else
             glance --verbose image-create-via-import \
@@ -57,6 +59,8 @@ else
 fi
 
 ID=$(openstack image show $NAME -c id -f value | strings)
+bash cmd-glances.sh ls -lh $STAGE_PATH
+bash cmd-glances.sh ls -lh $TASK_PATH
 
 until $(openstack image show $NAME -c status -f value | grep -q active); do
     echo -n "."; sleep 1;
