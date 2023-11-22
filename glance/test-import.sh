@@ -9,9 +9,13 @@ PHASED=1
 NAME=cirros-$(date +%s)
 CIR=cirros-0.5.2-x86_64-disk.img
 URL=http://download.cirros-cloud.net/0.5.2/$CIR
-STAGE_PATH=/var/lib/glance
+STAGE_PATH=/var/lib/glance/{os_glance_staging_store,os_glance_tasks_store}
 
 rbd -p images ls -l
+if [ $? -gt 0 ]; then
+    echo "Ceph pod did not respond to rbd. Exiting."
+    exit 1
+fi
 
 if [ $WEB -gt 0 ]; then
     glance --verbose image-create-via-import \
