@@ -1,8 +1,8 @@
 #!/bin/bash
-source bash-functions.sh
+source functions.sh
 
 CLEAN=1
-WEB=1
+WEB=0
 GLANCE_CLI=0
 
 NAME=cirros-$(date +%s)

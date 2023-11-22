@@ -54,6 +54,8 @@ oc get secret glance-external-config-data -o json | jq -r '.data."02-config.conf
 
 Use [conf-glance.sh](conf-glance.sh) to view all of the content in `glance-external-config-data`.
 
+## worker_self_reference_url
+
 The `worker_self_reference_url` should be set to the internal API URL
 for each node where Glance API will run
 [as was the case for TripleO](https://review.opendev.org/c/openstack/tripleo-heat-templates/+/882391). By
@@ -66,6 +68,8 @@ $ oc describe glance glance | grep 'API Endpoint' -A 1
     Internal:  http://glance-internal.openstack.svc:9292
 $
 ```
+
+## Replicas and PVCs
 
 Observe glance pods and PVCs
 ```
@@ -123,12 +127,12 @@ $ oc get pod glance-external-api-0 -o yaml
 $
 ```
 
-### Test image import conversion from qcow2 to raw
+## Test image import conversion from qcow2 to raw
 
-Define [bash functions](bash-functions.sh) so you can run `glance`,
+Define [bash functions](functions.sh) so you can run `glance`,
 `openstack`, `rbd` and `ceph` commands from the hypervisor.
 ```
-source bash-functions.sh
+source functions.sh
 ```
 Import the image using the `--uri`.
 ```
