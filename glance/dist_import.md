@@ -159,6 +159,11 @@ $ oc get pod glance-external-api-0 -o yaml
 ...
 $
 ```
+The glance external logs in debug mode show the following:
+```
+2023-11-21 18:10:29.168 1 INFO glance_store._drivers.filesystem [-]
+Directory to write image files does not exist (/var/lib/glance/os_glance_staging_store/). Creating.
+```
 
 ## Test image staging and conversion during import
 
