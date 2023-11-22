@@ -112,14 +112,14 @@ As described in
 > replays our current request against the remote host, returns the
 > result, and performs any response error translation required.
 
-This solution is based on a deployment where one container is the same
-as one deployment but as the glance-operator is currently written that
-is not the case. The stateful set shares the IP. The output `oc
+The above is based on the idea that one container is the same as one
+deployment. However, as the glance-operator is currently written
+this is not the case; the stateful set shares the IP. The output `oc
 describe pod glance-external-api-` will confirm this for the storage
-IP (though we want the internal API IP). After
-[this patch](https://github.com/openstack-k8s-operators/glance-operator/compare/main...fmount:glance-operator:list_of_glanceapi).
-merges though, glance api0 and api1 will be two diff statefulsets
-backed by two different services. The following will be two different
+IP (though we want the internal API IP). However, after
+[this patch](https://github.com/openstack-k8s-operators/glance-operator/compare/main...fmount:glance-operator:list_of_glanceapi)
+merges, glance `api0` and `api1` will be two diff statefulsets backed
+by two different services. Thus, the following will be two different
 services with two different end points.
 
 - glance-api0-{internal,external} --> glance-api0-internal.openstack.svc:9292
@@ -199,22 +199,22 @@ container in the `glance-external-api-0` pod.
 [fultonj@hamfast ~]$ oc rsh -c glance-api glance-external-api-0
 sh-5.1# ls /var/lib/glance/
 os_glance_staging_store  os_glance_tasks_store
-sh-5.1# 
+sh-5.1#
 exit
-[fultonj@hamfast ~]$ 
+[fultonj@hamfast ~]$
 ```
-There are three containers in the `glance-external-api-0` pods. If you
-don't specify the container with `-c` you'll get see inside the first
-pod, `glance-log` which doesn't have this directory.
+There are three containers in the `glance-external-api-0` pod.
 ```
 [fultonj@hamfast ~]$ for POD in $(oc get pods glance-external-api-0 -o jsonpath='{.spec.containers[*].name}'); do echo $POD; done
 glance-log
 glance-httpd
 glance-api
-[fultonj@hamfast ~]$ 
+[fultonj@hamfast ~]$
 ```
-Use `oc describe pod glance-external-api-` to see other details about
-what is in the pod.
+If you don't specify the container with `-c`, you'll get the first
+pod, `glance-log`, which doesn't have this directory. Use `oc describe
+pod glance-external-api-` to see other details about what is in the
+pod.
 
 ## Test image staging and conversion during import
 
