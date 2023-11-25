@@ -216,8 +216,66 @@ pod, `glance-log`, which doesn't have this directory. Use `oc describe
 pod glance-external-api-` to see other details about what is in the
 pod.
 
+## Reproduce the problem
+
+With replica three and `worker_self_reference_url` not set to
+individual nodes, we can reproduce the problem which
+[the worker_self_reference_url commit](https://opendev.org/openstack/glance/commit/41e1cecbe63c778ce8e92519993c61588ea1f0cb)
+solves. An attempt to import an image will result in it being stuck in
+a state of `importing`.
+
+The [test-import.sh](test-import.sh) script be configured to run the
+following commands:
+```
+glance --verbose image-create \
+   --disk-format raw \
+   --container-format bare \
+   --name $NAME
+ID=$(openstack image show $NAME -c id -f value | strings)
+glance image-stage --progress --file $CIR $ID
+bash cmd-glances.sh ls -lh /var/lib/glance/os_glance_staging_store
+glance image-import --import-method glance-direct $ID
+```
+With the script running we can observe the following:
+```
+> glance-external-api-0 ls -lh /var/lib/glance/os_glance_staging_store
+> glance-external-api-1 ls -lh /var/lib/glance/os_glance_staging_store
+total 0
+> glance-external-api-2 ls -lh /var/lib/glance/os_glance_staging_store
+total 4.0K
+-rw-r-----. 1 root root 273 Nov 25 16:33 c45160f8-0412-45da-acce-3346cdbde1c4
+```
+The above is from a call to [cmd-glances.sh](cmd-glances.sh)
+to list the contents of the staging directory. We see that the image
+has been staged on `glance-external-api-2`.
+
+We then see the following in the logs of `glance-external-api-0`.
+```
+2023-11-25 16:33:20.753 45 ERROR glance.async_.taskflow_executor
+Stderr: "qemu-img: Could not open
+'/var/lib/glance/os_glance_staging_store/c45160f8-0412-45da-acce-3346cdbde1c4':
+Could not open
+'/var/lib/glance/os_glance_staging_store/c45160f8-0412-45da-acce-3346cdbde1c4':
+No such file or directory\n"
+```
+
+The problem is:
+
+- glance-external-api-2 has staged the image at
+  /var/lib/glance/os_glance_staging_store/c45160f8-0412-45da-acce-3346cdbde1c4
+  on its PVC
+- glance-external-api-0 is trying to process it at the same path but
+  cannot find it on its PVC
+
+glance-external-api-0 should be able to read the image's
+`worker_self_reference_url` and it should return
+glance-external-api-2, because that's the server which staged the
+image. glance-external-api-0 should then be able to stream the
+image from glance-external-api-2 so that it can then complete
+the image's import and set it to active.
+
 ## Test image staging and conversion during import
 
 - Use [test-import.sh](test-import.sh)
-- Run commands directly as seen in
+- Run commands directly, with one replica, as seen in
   [dist_import_testing.md](dist_import_testing.md)
