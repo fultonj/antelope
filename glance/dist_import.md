@@ -274,6 +274,22 @@ image. glance-external-api-0 should then be able to stream the
 image from glance-external-api-2 so that it can then complete
 the image's import and set it to active.
 
+I assume the `worker_self_reference_url` is working because when I
+repeat the test and query the glance database, its value was stored
+like this:
+```
+[fultonj@hamfast glance{main}]$ gsql "SELECT * FROM image_properties WHERE image_id=\"$ID\" AND name='os_glance_stage_host'"
++----+--------------------------------------+----------------------+-------------------------------------------+---------------------+---------------------+---------------------+---------+
+| id | image_id                             | name                 | value                                     | created_at          | updated_at          | deleted_at          | deleted |
++----+--------------------------------------+----------------------+-------------------------------------------+---------------------+---------------------+---------------------+---------+
+|  8 | 7b73dd6b-f9c5-4082-b4b7-309842075094 | os_glance_stage_host | http://glance-internal.openstack.svc:9292 | 2023-11-27 20:12:28 | 2023-11-27 20:12:41 | 2023-11-27 20:12:41 |       1 |
++----+--------------------------------------+----------------------+-------------------------------------------+---------------------+---------------------+---------------------+---------+
+[fultonj@hamfast glance{main}]$
+```
+I assume the problem is that http://glance-internal.openstack.svc:9292
+will load balance across the glance workers so odds are only 1 our of
+N (for N workers) that the right image will be found.
+
 ## Test image staging and conversion during import
 
 - Use [test-import.sh](test-import.sh)

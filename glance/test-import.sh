@@ -2,9 +2,9 @@
 source functions.sh
 
 CLEAN=1
-WEB=1
-GLANCE_CLI=0
-PHASED=0
+WEB=0
+GLANCE_CLI=1
+PHASED=1
 
 NAME=cirros-$(date +%s)
 CIR=cirros-0.5.2-x86_64-disk.img
@@ -40,6 +40,7 @@ else
 	    glance image-stage --progress --file $CIR $ID
 	    bash cmd-glances.sh ls -lh $STAGE_PATH
 	    bash cmd-glances.sh ls -lh $TASK_PATH
+            gsql "SELECT * FROM image_properties WHERE image_id=\"$ID\" AND name='os_glance_stage_host'"
 	    glance image-import --import-method glance-direct $ID
 	else
             glance --verbose image-create-via-import \
