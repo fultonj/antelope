@@ -19,6 +19,9 @@ if [ $? -gt 0 ]; then
 fi
 
 if [ $WEB -gt 0 ]; then
+    # stage and import goes to the same host (does not test distributed image import)
+    # distributed image import is only associated with glance-direct (not web-download)
+    # web-download does not set os_glance_stage_host to worker_self_reference_url
     glance --verbose image-create-via-import \
        --disk-format qcow2 \
        --container-format bare \
@@ -28,12 +31,14 @@ if [ $WEB -gt 0 ]; then
 else
     oc rsh -t --shell='/bin/sh' openstackclient stat $CIR > /dev/null 2>&1
     if [ $? -gt 0 ]; then
-        oc rsh -t --shell='/bin/sh' openstackclient curl $URL -o $CIR
+        oc rsh -t --shell='/bin/sh' openstackclient curl -L $URL -o $CIR
     fi
     if [ $GLANCE_CLI -gt 0 ]; then
 	if [ $PHASED -gt 0 ]; then
+            # By using phases, stage and import happen on different hosts,
+            # so this is the method to use to distributed image import
             glance --verbose image-create \
-		   --disk-format raw \
+		   --disk-format qcow2 \
 		   --container-format bare \
 		   --name $NAME
 	    ID=$(openstack image show $NAME -c id -f value | strings)
@@ -43,19 +48,23 @@ else
             gsql "SELECT * FROM image_properties WHERE image_id=\"$ID\" AND name='os_glance_stage_host'"
 	    glance image-import --import-method glance-direct $ID
 	else
+	    # stage and import go to the same host (does not test distributed image import)
             glance --verbose image-create-via-import \
 		   --disk-format raw \
 		   --container-format bare \
 		   --name $NAME \
 		   --file $CIR \
 		   --import-method glance-direct
+            gsql "SELECT * FROM image_properties WHERE image_id=\"$ID\" AND name='os_glance_stage_host'"
 	fi
     else
+	# stage and import go to the same host (does not test distributed image import)
         openstack image create \
                   --disk-format raw \
                   --container-format bare \
                   --file $CIR \
                   --import $NAME
+	gsql "SELECT * FROM image_properties WHERE image_id=\"$ID\" AND name='os_glance_stage_host'"
     fi
 fi
 
