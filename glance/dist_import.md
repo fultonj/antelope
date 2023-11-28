@@ -245,51 +245,53 @@ glance image-import --import-method glance-direct $ID
 With the script running we can observe the following:
 ```
 > glance-external-api-0 ls -lh /var/lib/glance/os_glance_staging_store
+total 16M
+-rw-r-----. 1 root root 16M Nov 28 22:00 bdd5c5c5-07fb-4dd3-9197-f1cb573bd9d7
 > glance-external-api-1 ls -lh /var/lib/glance/os_glance_staging_store
 total 0
 > glance-external-api-2 ls -lh /var/lib/glance/os_glance_staging_store
-total 4.0K
--rw-r-----. 1 root root 273 Nov 25 16:33 c45160f8-0412-45da-acce-3346cdbde1c4
+total 0
 ```
 The above is from a call to [cmd-glances.sh](cmd-glances.sh)
 to list the contents of the staging directory. We see that the image
-has been staged on `glance-external-api-2`.
+has been staged on `glance-external-api-0`.
 
-We then see the following in the logs of `glance-external-api-0`.
+We then see the following in the logs of `glance-external-api-1`.
 ```
-2023-11-25 16:33:20.753 45 ERROR glance.async_.taskflow_executor
 Stderr: "qemu-img: Could not open
-'/var/lib/glance/os_glance_staging_store/c45160f8-0412-45da-acce-3346cdbde1c4':
+'/var/lib/glance/os_glance_staging_store/bdd5c5c5-07fb-4dd3-9197-f1cb573bd9d7':
 Could not open
-'/var/lib/glance/os_glance_staging_store/c45160f8-0412-45da-acce-3346cdbde1c4':
-No such file or directory\n"
+'/var/lib/glance/os_glance_staging_store/bdd5c5c5-07fb-4dd3-9197-f1cb573bd9d7':
+No such file or directory\n": RuntimeError: Unexpected error while running command.
 ```
 
 The problem is:
 
-- glance-external-api-2 has staged the image at
-  /var/lib/glance/os_glance_staging_store/c45160f8-0412-45da-acce-3346cdbde1c4
+- glance-external-api-0 has staged the image at
+  /var/lib/glance/os_glance_staging_store/bdd5c5c5-07fb-4dd3-9197-f1cb573bd9d7
   on its PVC
-- glance-external-api-0 is trying to process it at the same path but
+- glance-external-api-1 is trying to process it at the same path but
   cannot find it on its PVC
 
-glance-external-api-0 should be able to read the image's
+glance-external-api-1 should be able to read the image's
 `worker_self_reference_url` and it should return
-glance-external-api-2, because that's the server which staged the
-image. glance-external-api-0 should then be able to stream the
-image from glance-external-api-2 so that it can then complete
+glance-external-api-0, because that's the server which staged the
+image. glance-external-api-1 should then be able to stream the
+image from glance-external-api-0 so that it can then complete
 the image's import and set it to active.
 
-The `worker_self_reference_url` is getting set and when I repeat the
-test and query the glance database, its value is stored like this:
+The `worker_self_reference_url` is getting set and when I query the
+Glance database, its value is stored like this:
 ```
 mysql> SELECT * FROM image_properties WHERE image_id='a0a302be-8668-4a1a-9073-24f46cbf4d11' AND name='os_glance_stage_host'
 +-----+--------------------------------------+----------------------+--------------------------------------------------+---------------------+---------------------+---------------------+---------+
 | id  | image_id                             | name                 | value                                            | created_at          | updated_at          | deleted_at          | deleted |
 +-----+--------------------------------------+----------------------+--------------------------------------------------+---------------------+---------------------+---------------------+---------+
-| 153 | a0a302be-8668-4a1a-9073-24f46cbf4d11 | os_glance_stage_host | https://glance-public-openstack.apps-crc.testing | 2023-11-28 21:35:54 | 2023-11-28 21:35:57 | 2023-11-28 21:35:57 |       1 |
+| 161 | bdd5c5c5-07fb-4dd3-9197-f1cb573bd9d7 | os_glance_stage_host | https://glance-public-openstack.apps-crc.testing | 2023-11-28 22:00:35 | 2023-11-28 22:00:38 | 2023-11-28 22:00:38 |       1 |
 +-----+--------------------------------------+----------------------+--------------------------------------------------+---------------------+---------------------+---------------------+---------+
 ```
+Proxying from the above URL would only result in streaming the image
+if the load balancer proxied the request to glance-external-api-0.
 I believe it does not attempt to proxy from the URL above though since
 [is_proxyable](https://github.com/openstack/glance/blob/fd222f31283db66a640a1e0802ccc7e386f7a6a4/glance/api/v2/images.py#L296-L307)
 is returning false.
