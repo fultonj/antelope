@@ -6,11 +6,11 @@ WEB=0
 GLANCE_CLI=1
 PHASED=1
 
+TIMEOUT=4
 NAME=cirros-$(date +%s)
 CIR=cirros-0.5.2-x86_64-disk.img
 URL=http://download.cirros-cloud.net/0.5.2/$CIR
 STAGE_PATH=/var/lib/glance/os_glance_staging_store
-TASK_PATH=/var/lib/glance/os_glance_tasks_store
 
 rbd -p images ls -l
 if [ $? -gt 0 ]; then
@@ -44,8 +44,6 @@ else
 	    ID=$(openstack image show $NAME -c id -f value | strings)
 	    glance image-stage --progress --file $CIR $ID
 	    bash cmd-glances.sh ls -lh $STAGE_PATH
-	    bash cmd-glances.sh ls -lh $TASK_PATH
-            gsql "SELECT * FROM image_properties WHERE image_id=\"$ID\" AND name='os_glance_stage_host'"
 	    glance image-import --import-method glance-direct $ID
 	else
 	    # stage and import go to the same host (does not test distributed image import)
@@ -55,7 +53,6 @@ else
 		   --name $NAME \
 		   --file $CIR \
 		   --import-method glance-direct
-            gsql "SELECT * FROM image_properties WHERE image_id=\"$ID\" AND name='os_glance_stage_host'"
 	fi
     else
 	# stage and import go to the same host (does not test distributed image import)
@@ -64,18 +61,19 @@ else
                   --container-format bare \
                   --file $CIR \
                   --import $NAME
-	gsql "SELECT * FROM image_properties WHERE image_id=\"$ID\" AND name='os_glance_stage_host'"
     fi
 fi
 
 ID=$(openstack image show $NAME -c id -f value | strings)
+gsql "SELECT * FROM image_properties WHERE image_id=\"$ID\" AND name='os_glance_stage_host'"
 bash cmd-glances.sh ls -lh $STAGE_PATH
-bash cmd-glances.sh ls -lh $TASK_PATH
 
-until $(openstack image show $NAME -c status -f value | grep -q active); do
-    echo -n "."; sleep 1;
-done
-echo ""
+STATUS=$(openstack image show $NAME -c status -f value | strings)
+echo "$NAME is $STATUS."
+if [[ $STATUS != "active" ]]; then
+    echo "Sleeping $TIMEOUT seconds"
+    sleep $TIMEOUT
+fi
 
 openstack image show $NAME
 glance image-show $ID
@@ -84,4 +82,5 @@ rbd -p images ls -l
 
 if [ $CLEAN -gt 0 ]; then
     openstack image delete $NAME
+    bash cmd-glances.sh rm -f $STAGE_PATH/$ID > /dev/null 2> /dev/null
 fi
