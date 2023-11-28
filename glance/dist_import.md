@@ -56,18 +56,23 @@ Use [conf-glance.sh](conf-glance.sh) to view all of the content in `glance-exter
 
 ## worker_self_reference_url
 
-The `worker_self_reference_url` should be set to the internal API URL
-for each node where Glance API will run
-[as was the case for
+The `worker_self_reference_url` should be set to the Glance API URL
+for each node where Glance API will run [as was the case for
 TripleO](https://review.opendev.org/c/openstack/tripleo-heat-templates/+/882391).
+A user who stages an image doesn't have access to the internal API
+Glance server. Thus, the image will always be staged on the filesystem
+of an external Glance API server.
 
 For now,
 [glance-ceph overlay deployment.yaml](https://github.com/fultonj/antelope/blob/main/crs/control_plane/overlay/glance-ceph/deployment.yaml)
-sets it to the internal API Endpoint of the Glance service.
+sets it to the external (Public) API Endpoint of the Glance service.
 ```
-$ oc describe glance glance | grep 'API Endpoint' -A 1
+$ oc describe glance glance | grep 'API Endpoint' -C 2
+  Storage Request:       10G
+Status:
   API Endpoint:
     Internal:  http://glance-internal.openstack.svc:9292
+    Public:    https://glance-public-openstack.apps-crc.testing
 $
 ```
 However, as per the
@@ -97,7 +102,7 @@ However, as per the
 > storage.
 
 Because we are avoiding shared-staging behavior, we should not be
-setting the `worker_self_reference_url` to the load balanced SVC
+setting the `worker_self_reference_url` to the load balanced service
 endpoint. Instead the operator should be setting the IP and port for
 each Glance pod. It's assumed that the pods can communicate with each
 other on the same internal API network.
@@ -222,10 +227,11 @@ With replica three and `worker_self_reference_url` not set to
 individual nodes, we can reproduce the problem which
 [the worker_self_reference_url commit](https://opendev.org/openstack/glance/commit/41e1cecbe63c778ce8e92519993c61588ea1f0cb)
 solves. An attempt to import an image will result in it being stuck in
-a state of `importing`.
+a state of `importing` 2 out of 3 times. Though it will succeed 1 out
+of 3 times because the `glance image-stage` and `glance image-import`
+will be executed on the same host.
 
-The [test-import.sh](test-import.sh) script be configured to run the
-following commands:
+The [test-import.sh](test-import.sh) runs the following commands:
 ```
 glance --verbose image-create \
    --disk-format raw \
@@ -274,24 +280,20 @@ image. glance-external-api-0 should then be able to stream the
 image from glance-external-api-2 so that it can then complete
 the image's import and set it to active.
 
-I assume the `worker_self_reference_url` is working because when I
-repeat the test and query the glance database, its value was stored
-like this:
+The `worker_self_reference_url` is getting set and when I repeat the
+test and query the glance database, its value is stored like this:
 ```
-[fultonj@hamfast glance{main}]$ gsql "SELECT * FROM image_properties WHERE image_id=\"$ID\" AND name='os_glance_stage_host'"
-+----+--------------------------------------+----------------------+-------------------------------------------+---------------------+---------------------+---------------------+---------+
-| id | image_id                             | name                 | value                                     | created_at          | updated_at          | deleted_at          | deleted |
-+----+--------------------------------------+----------------------+-------------------------------------------+---------------------+---------------------+---------------------+---------+
-|  8 | 7b73dd6b-f9c5-4082-b4b7-309842075094 | os_glance_stage_host | http://glance-internal.openstack.svc:9292 | 2023-11-27 20:12:28 | 2023-11-27 20:12:41 | 2023-11-27 20:12:41 |       1 |
-+----+--------------------------------------+----------------------+-------------------------------------------+---------------------+---------------------+---------------------+---------+
-[fultonj@hamfast glance{main}]$
+mysql> SELECT * FROM image_properties WHERE image_id='a0a302be-8668-4a1a-9073-24f46cbf4d11' AND name='os_glance_stage_host'
++-----+--------------------------------------+----------------------+--------------------------------------------------+---------------------+---------------------+---------------------+---------+
+| id  | image_id                             | name                 | value                                            | created_at          | updated_at          | deleted_at          | deleted |
++-----+--------------------------------------+----------------------+--------------------------------------------------+---------------------+---------------------+---------------------+---------+
+| 153 | a0a302be-8668-4a1a-9073-24f46cbf4d11 | os_glance_stage_host | https://glance-public-openstack.apps-crc.testing | 2023-11-28 21:35:54 | 2023-11-28 21:35:57 | 2023-11-28 21:35:57 |       1 |
++-----+--------------------------------------+----------------------+--------------------------------------------------+---------------------+---------------------+---------------------+---------+
 ```
-I assume the problem is that http://glance-internal.openstack.svc:9292
-will load balance across the glance workers so odds are only 1 our of
-N (for N workers) that the right image will be found.
+I believe it does not attempt to proxy from the URL above though since
+[is_proxyable](https://github.com/openstack/glance/blob/fd222f31283db66a640a1e0802ccc7e386f7a6a4/glance/api/v2/images.py#L296-L307)
+is returning false.
 
 ## Test image staging and conversion during import
 
-- Use [test-import.sh](test-import.sh)
-- Run commands directly, with one replica, as seen in
-  [dist_import_testing.md](dist_import_testing.md)
+- Use [test-import.sh](test-import.sh) to reproduce the above results
