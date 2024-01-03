@@ -1,23 +1,24 @@
-# Testing PR39
+# Testing PR39 
 
 These are my notes on testing architecture PR39.
 
-It seems, even without PR39, my dnsmasq pod gets into a crashloop.
-Here are steps to reproduce.
+The CRs from PR39 should produce a working deployment when compared to 
+manually editing the CRs from the main branch. These notes describe
+how to make manual edits on an environment deployed by ci-framework.
 
 Use a fresh copy of this:
 
- https://github.com/fultonj/architecture/tree/main
+ https://github.com/openstack-k8s-operators/architecture/tree/main
 
 ## stage1
 
-Follow https://github.com/fultonj/architecture/tree/main/va/hci/stage1
+Follow https://github.com/openstack-k8s-operators/architecture/tree/main/va/hci/stage1
 
 no changes
 
 ## stage2
 
-Follow https://github.com/fultonj/architecture/tree/main/va/hci/stage2
+Follow https://github.com/openstack-k8s-operators/architecture/tree/main/va/hci/stage2
 
 no changes
 
@@ -44,14 +45,14 @@ grep -rl ostest ./ | xargs sed -i 's/ostest-master/master/g'
 popd
 ```
 
-4. change mtu
+4. change MTU
 ```
 pushd /home/zuul/architecture/va/hci/
 grep -rl 9000 ./ | xargs sed -i 's/9000/1500/g'
 popd
 ```
 
-Follow https://github.com/fultonj/architecture/tree/main/va/hci/stage3
+Follow https://github.com/openstack-k8s-operators/architecture/tree/main/va/hci/stage3
 
 ## stage4
 
@@ -64,43 +65,68 @@ Follow https://github.com/fultonj/architecture/tree/main/va/hci/stage3
       options:
         - key: server
           values:
-            - 192.168.122.1 # CHANGEME
+            - 192.168.122.1
+        - key: server
+          values:
             - 10.47.242.10
+        - key: server
+          values:
             - 10.38.5.26
 ```
 
-Follow https://github.com/fultonj/architecture/tree/main/va/hci/stage4
+Follow https://github.com/openstack-k8s-operators/architecture/tree/main/va/hci/stage4
 
-Why do I get this?
+### Note about DNS
 
+Each key/value now needs to be separate as above. The following no
+longer works:
+```
+  dns:
+    template:
+      options:
+        - key: server
+          values:
+            - 192.168.122.1
+            - 10.47.242.10
+            - 10.38.5.26
+
+```
+As it will crash loop the pod:
 ```
 [zuul@controller-0 stage4]$ oc get pods
 NAME                           READY   STATUS                  RESTARTS      AGE
 dnsmasq-dns-67848bbc44-gbd4n   0/1     Init:CrashLoopBackOff   2 (25s ago)   70s
 dnsmasq-dns-6b7b984f54-hznsc   0/1     Init:CrashLoopBackOff   2 (19s ago)   70s
-memcached-0                    1/1     Running                 0             70s
-openstack-cell1-galera-0       0/1     Running                 0             70s
-openstack-cell1-galera-1       0/1     Running                 0             70s
-openstack-cell1-galera-2       1/1     Running                 0             70s
-openstack-galera-0             0/1     Running                 0             70s
-openstack-galera-1             0/1     Running                 0             70s
-openstack-galera-2             1/1     Running                 0             70s
-ovn-controller-ccbch           3/3     Running                 0             70s
-ovn-controller-pq2sz           3/3     Running                 0             70s
-ovn-controller-tf5q7           3/3     Running                 0             70s
-ovn-northd-59dc9bf674-kz7q9    1/1     Running                 0             27s
-ovsdbserver-nb-0               1/1     Running                 0             70s
-ovsdbserver-sb-0               1/1     Running                 0             70s
-rabbitmq-cell1-server-0        0/1     Running                 0             70s
-rabbitmq-cell1-server-1        0/1     Running                 0             70s
-rabbitmq-cell1-server-2        0/1     PodInitializing         0             70s
-rabbitmq-server-0              0/1     Running                 0             70s
-rabbitmq-server-1              0/1     Running                 0             70s
-rabbitmq-server-2              0/1     PodInitializing         0             70s
-[zuul@controller-0 stage4]$ 
+```
+```
+$ oc logs dnsmasq-dns-65cf7db67d-kqd92 -c init
+dnsmasq: bad address at line 1 of /etc/dnsmasq.d/config.cfg
+```
+```
+[zuul@osp-storage-01 ~]$ oc get cm dns -o yaml
+apiVersion: v1
+data:
+  dns: |
+    server=192.168.122.1,10.47.242.10,10.38.5.26
+kind: ConfigMap
+```
+When it's configured correctly it should look like this:
+```
+[zuul@controller-0 misc]$ oc get cm dns -o yaml | head -7
+apiVersion: v1
+data:
+  dns: |
+    server=192.168.122.1
+    server=10.47.242.10
+    server=10.38.5.26
+kind: ConfigMap
+[zuul@controller-0 misc]$ 
 ```
 
 ## stage5
-todo
+
+Use the ci-framework documentation.
+
 ## stage6
-todo
+
+Use the ci-framework documentation.
