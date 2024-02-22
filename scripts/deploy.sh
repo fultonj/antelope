@@ -3,6 +3,7 @@
 #TAGS
 CRC=${CRC:-"0"}
 ATTACH=${ATTACH:-"0"}
+LVMS=${LVMS:-"0"}
 PVC=${PVC:-"0"}
 DEPS=${DEPS:-"0"}
 OPER=${OPER:-"0"}
@@ -14,6 +15,11 @@ EDPM_DEPLOY_PREP=${EDPM_DEPLOY_PREP:-"0"}
 NODES=2
 NODE_START=0
 ADOPT=0
+
+if [[ $LVMS -gt 0 && $PVC -gt 0 ]]; then
+    echo "LVMS and PVC are mutually exclusive."
+    exit 1
+fi
 
 if [[ -z /usr/local/bin/yq ]]; then
     # install yq if it is missing
@@ -65,6 +71,43 @@ cd ..
 
 if [ $PVC -eq 1 ]; then
     make crc_storage
+fi
+
+if [ $LVMS -eq 1 ]; then
+    if [[ -z scripts/gen-lvms-kustomize.sh ]]; then
+        PR="https://github.com/openstack-k8s-operators/install_yamls/pull/739"
+        echo "Changes from $PR are missing"
+        exit 1
+    fi
+    OP_COUNT=$(oc -n openshift-storage get pods | awk {'print $1'} | grep lvms-operator | wc -l)
+    if [[ $OP_COUNT -eq 0 ]]; then
+        echo "no lvms-operator pod, deploying one"
+        make lvms
+    fi
+    while [[ 1 ]]; do
+          echo -n .
+          sleep 1
+          OP_COUNT=$(oc -n openshift-storage get pods | awk {'print $1'} | grep lvms-operator | wc -l)
+          if [[ $OP_COUNT -gt 0 ]]; then
+              break
+          fi
+    done
+    sleep 5
+    VG_COUNT=$(oc -n openshift-storage get pods | awk {'print $1'} | grep vg-manager | wc -l)
+    if [[ $VG_COUNT -eq 0 ]]; then
+        echo "no vg-manager pod, deploying one"
+        make lvms_deploy
+    fi
+    while [[ 1 ]]; do
+        echo -n .
+        sleep 1
+        VG_COUNT=$(oc -n openshift-storage get pods | awk {'print $1'} | grep vg-manager | wc -l)
+        if [[ $VG_COUNT -gt 0 ]]; then
+            break
+        fi
+    done
+    oc -n openshift-storage get LVMCluster
+    oc get sc
 fi
 
 if [ $DEPS -eq 1 ]; then

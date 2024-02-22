@@ -7,8 +7,14 @@ CONTROL=1
 CEPH_CLI=0
 OPERATORS=0
 CEPH_K8S=0
-PVC=1
+PVC=0
+LVMS=1
 CRC=0
+
+if [[ $LVMS -gt 0 && $PVC -gt 0 ]]; then
+    echo "LVMS and PVC are mutually exclusive."
+    exit 1
+fi
 
 # node0 node1 node2
 NODES=2
@@ -96,6 +102,25 @@ if [ $PVC -eq 1 ]; then
     pushd ~/install_yamls
     make crc_storage_cleanup
     make crc_storage_cleanup
+    popd
+fi
+
+if [ $LVMS -eq 1 ]; then
+    echo -n "Waiting to ensure all Galera pods are have stopped running..."
+    while [[ 1 ]]; do
+        if [[ $(oc get pods 2> /dev/null | grep -i galera | wc -l) -gt 0 ]]; then
+            echo -n "."
+            sleep 1
+        else
+            echo "Galera is not running"
+            break
+        fi
+    done
+    pushd ~/install_yamls
+    make lvms_deploy_cleanup
+    sleep 2
+    make lvms_cleanup
+    rm -f ~/.crc/vdb
     popd
 fi
 
