@@ -8,18 +8,8 @@ if [ $CLEAN -eq 1 ]; then
     popd
 fi
 
-export CRC=1
-bash deploy.sh
-unset CRC
+CRC=1 bash deploy.sh
+ATTACH=1 bash deploy.sh
+LVMS=1 bash deploy.sh
+DEPS=1 bash deploy.sh
 
-export ATTACH=1
-bash deploy.sh
-unset ATTACH
-
-export PVC=1
-bash deploy.sh
-unset PVC
-
-export DEPS=1
-bash deploy.sh
-unset DEPS
