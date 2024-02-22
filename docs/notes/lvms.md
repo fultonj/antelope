@@ -104,8 +104,10 @@ $
 ## metrics-cert workaround
 
 The `metrics-cert` volume mount won't be available if the
-certificate has not yet been created. PR739 has a line to
-patch the `lvms-operator` to remove this mount to speed up
+certificate has not yet been created and it takes time for
+this cert to be created. For testing and development this
+certficate is not mandatory so PR739 has a line to patch
+the `lvms-operator` to remove this mount to speed up
 deployment. Once the script sees the `lvms-operator.v0.0.1`
 CSV:
 ```
@@ -137,8 +139,9 @@ oc -n openshift-storage edit csv
 ```
 I then search for `metrics-cert`. I then remove these lines.
 ```
-              - name: metrics-cert
-                secret:
-                  defaultMode: 420
-                  secretName: lvms-operator-metrics-cert
+        - mountPath: /tmp/k8s-metrics-server/serving-certs
+          name: metrics-cert
+          readOnly: true
 ```
+It is not mandatory to do this, you should be able to wait for the
+certificate.
