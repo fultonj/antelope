@@ -7,29 +7,62 @@ Instead of using `make crc_storage` use `make lvms` and `make
 lvms_deploy`. Then replace `local-storage` with `lvms-vg1` in
 CRs which request PVCs.
 
-Be sure to run `make crc_attach_default_interface` before `make lvms`.
-Otherwise, if LVMS is set up first, then attaching the extra network
-interface will fail with a `No more available PCI slots` error.
+## TL;DR
 
-I use it like this:
+0. Clean Previous deployment (optional)
 ```
 cd ~/install_yamls/devsetup
 make crc_cleanup
-rm -f ~/.crc/vdb
+```
+1. Deploy CRC
+```
 make CPUS=12 MEMORY=49152 DISK=100 crc
 make crc_attach_default_interface
 cd ..
+```
+2. Deploy LVMS operator
+```
 make lvms
+```
+3. Observe `lvms-operator`
+```
+oc get pods -n openshift-storage
+```
+4. Deploy vg-manager
+```
 make lvms_deploy
 ```
+5. Observe `vg-manager` and storage class
+```
+oc get pods -n openshift-storage
+oc get sc
+```
+6. Replace `local-storage` with `lvms-vg1` in OpenStack CRs
+```
+STORAGE_CLASS=lvms-vg1 make openstack_deploy_prep
+```
+7. Remove vg-manager (after control plane is removed)
+```
+make lvms_deploy_cleanup
+```
+8. Remove lvms-operator (optionally remove backing block device)
+```
+make lvms_cleanup
+rm -f ~/.crc/vdb
+```
+After step 8 you can return to step 2.
 
 ## Details
+
+Be sure to run `make crc_attach_default_interface` before `make lvms`.
+Otherwise, if LVMS is set up first, then attaching the extra network
+interface will fail with a `No more available PCI slots` error.
 
 [PR739](https://github.com/openstack-k8s-operators/install_yamls/pull/739)
 uses `/dev/vdb` (backed by `~/.crc/vdb`) as it's available on `crc`
 and defaults to `DISK_SIZE=100` to provide up to ten `10G` PVs.
 ```
-$ make lvms
+$ DISK_SIZE=100 make lvms
 bash scripts/gen-lvms-kustomize.sh
 ~/install_yamls/out/openstack/lvms/cr ~/install_yamls
 Creating Device vdb:100
