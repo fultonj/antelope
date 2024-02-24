@@ -8,6 +8,7 @@ PVC=${PVC:-"0"}
 DEPS=${DEPS:-"0"}
 OPER=${OPER:-"0"}
 CONTROL=${CONTROL:-"0"}
+CONTROL_MTU=${CONTROL_MTU:-"0"}
 EDPM_NODE=${EDPM_NODE:-"0"}
 EDPM_DEPLOY_PREP=${EDPM_DEPLOY_PREP:-"0"}
 
@@ -118,20 +119,35 @@ fi
 
 if [ $OPER -eq 1 ]; then
     make NETWORK_MTU=9000 BMO_SETUP=false openstack
+    exit 0
+fi
+
+eval $(crc oc-env)
+oc login -u kubeadmin -p 12345678 https://api.crc.testing:6443
+if [[ $? -gt 0 ]]; then
+    echo "Error: Unable to authenticate to OpenShift"
+    exit 1
+fi
+oc get pods -n openstack-operators | grep controller
+if [[ $(oc get pods -n openstack-operators | grep controller | wc -l) -eq 0 ]]; then
+    echo "Error: no controllers running in openstack-operators namespace"
+    exit 1
 fi
 
 if [ $CONTROL -eq 1 ]; then
-    eval $(crc oc-env)
-    oc login -u kubeadmin -p 12345678 https://api.crc.testing:6443
-    if [[ $? -gt 0 ]]; then
-        echo "Error: Unable to authenticate to OpenShift"
+    make netconfig_deploy
+    make openstack_deploy
+    SRC=$HOME/install_yamls/out/openstack/openstack/cr/core_v1beta1_openstackcontrolplane_galera_network_isolation.yaml
+    TARGET=$HOME/antelope/crs/control_plane/base/deployment.yaml
+    if [[ -e $SRC ]]; then
+        cp -v $SRC $TARGET
+    else
+        echo "$SRC is not found. Problem with 'make openstack_deploy'?"
         exit 1
     fi
-    oc get pods -n openstack-operators | grep controller
-    if [[ $(oc get pods -n openstack-operators | grep controller | wc -l) -eq 0 ]]; then
-        echo "Error: no controllers running in openstack-operators namespace"
-        exit 1
-    fi
+fi
+
+if [ $CONTROL_MTU -eq 1 ]; then
     # Set the MTU for the Node Network Policy (NNCP), which configures
     # the bridges on OCP worker(s). I.e. Cutomize the NetConfig CR
     # (usually made by "make openstack_deploy") to set MTU=9000 for

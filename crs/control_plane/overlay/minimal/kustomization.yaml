@@ -6,13 +6,15 @@ resources:
 - ../../base/
 
 # Ensure no glance pods are running yet
-# Disable five services unnecessary for Glance
-# Note: heat ceilometer horizon already disabled by deploy.sh
+# Disable eight services unnecessary for Glance
 patches:
   - patch: |-
       - op: replace
-        path: /spec/glance/template/glanceAPI/replicas
+        path: /spec/glance/template/glanceAPIs/default/replicas
         value: 0
+      - op: replace
+        path: /spec/glance/template/storageClass
+        value: "local-storage"
       - op: add
         path: /spec/cinder/enabled
         value: false
@@ -30,6 +32,15 @@ patches:
         value: false
       - op: add
         path: /spec/ovn/enabled
+        value: false
+      - op: add
+        path: /spec/swift/enabled
+        value: false
+      - op: add
+        path: /spec/heat/enabled
+        value: false
+      - op: add
+        path: /spec/horizon/enabled
         value: false
     target:
       kind: OpenStackControlPlane
