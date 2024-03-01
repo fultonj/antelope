@@ -5,16 +5,20 @@ openstack() {
 }
 
 ceph() {
-    oc rsh -t --shell='/bin/sh' ceph ceph $@
+    #oc rsh -t --shell='/bin/sh' ceph ceph $@
+    ssh compute-0 "sudo cephadm shell -- ceph $@"
 }
 
 rbd() {
-    oc rsh -t --shell='/bin/sh' ceph rbd $@
+    # oc rsh -t --shell='/bin/sh' ceph rbd $@
+    ssh compute-0 "sudo cephadm shell -- rbd $@"
 }
 
 glance() {
     # From opentsackclient pod's `.config/openstack/clouds.yaml`
-    oc rsh -t --shell='/bin/sh' openstackclient glance --os-auth-url https://keystone-public-openstack.apps-crc.testing --os-project-name admin --os-username admin --os-password 12345678 --os-user-domain-name default --os-project-domain-name default $@
+    # END=https://keystone-public-openstack.apps-crc.testing
+    END=https://keystone-public-openstack.apps.ocp.openstack.lab
+    oc rsh -t --shell='/bin/sh' openstackclient glance --os-auth-url $END --os-project-name admin --os-username admin --os-password 12345678 --os-user-domain-name default --os-project-domain-name default $@
 }
 
 function gsql() {
