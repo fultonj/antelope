@@ -88,3 +88,31 @@ curl -i \
 }' \
   "http://keystone-internal.openstack.svc:5000/v3/auth/tokens" ; echo
 ```
+
+If you are using "TLS everywhere", then identify the certificates on
+the EDPM node and pass them with the curl command.
+```
+cd /var/lib/openstack/certs/nova-custom-ceph
+curl -k --cert tls.crt --key tls.key -i \
+  -H "Content-Type: application/json" \
+  -d '
+{ "auth": {
+    "identity": {
+      "methods": ["password"],
+      "password": {
+        "user": {
+          "name": "nova",
+          "domain": { "id": "default" },
+          "password": "12345678"
+        }
+      }
+    }
+  }
+}' \
+  "https://keystone-internal.openstack.svc:5000/v3/auth/tokens" ; echo
+```
+
+Per the
+[TLS-e doc](https://github.com/openstack-k8s-operators/dataplane-operator/blob/main/docs/assemblies/tls.adoc),
+the EDPM `install-certs` service installs the certs in
+`/var/lib/openstack/certs/<service_name>`.
