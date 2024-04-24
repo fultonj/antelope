@@ -6,8 +6,10 @@ function clean_tmp {
 }
 
 function switch_branch {
+    echo "Switching branch to \"$1\""
     pushd architecture > /dev/null
     git checkout $1 1> /dev/null 2> /dev/null
+    BRANCH=$1
     popd > /dev/null
 }
 
@@ -46,14 +48,13 @@ pushd ~/review/ > /dev/null
 
 clean_tmp
 check_branch
-
-# switch_branch $BRANCH
-# build_va1 /tmp/new
+TESTED_BRANCH=$BRANCH
+build_va1 /tmp/new
 
 switch_branch main
 build_va1 /tmp/old
-switch_branch $BRANCH
+switch_branch $TESTED_BRANCH
 
-echo "Compare \"$BRANCH\" in /tmp/new to \"main\" in /tmp/old"
+echo "Compare \"$TESTED_BRANCH\" in /tmp/new to \"main\" in /tmp/old"
 
 popd > /dev/null
