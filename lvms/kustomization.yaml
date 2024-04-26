@@ -1,0 +1,2 @@
+resources:
+- https://github.com/openshift/lvm-operator/config/olm-deploy

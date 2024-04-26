@@ -6,7 +6,7 @@ Ansible role.
 - We use
 [LVMS](https://docs.openshift.com/container-platform/4.15/storage/persistent_storage/persistent_storage_local/persistent-storage-using-lvms.html)
 (based on [TopoLVM](https://github.com/topolvm/topolvm))
-[with install_yamls](https://github.com/fultonj/antelope/blob/main/docs/notes/lvms.md)
+[with install_yamls](../docs/notes/lvms.md)
 and should also use it with
 [ci-framework](https://github.com/openstack-k8s-operators/ci-framework/).
 
@@ -44,4 +44,70 @@ sda      8:0    0  100G  0 disk
 vda    252:0    0   10G  0 disk 
 vdb    252:16   0   10G  0 disk 
 [zuul@controller-0 ~]$
+```
+
+## Manual LVMS
+
+We need to know what Ansible has to automate first.
+
+### Deploy
+
+1. Use [kustomization.yaml](kustomization.yaml) to deploy the
+   LVMS operator.
+```
+[zuul@controller-0 lvms]$ oc kustomize .  | oc apply -f -
+namespace/openshift-storage created
+operatorgroup.operators.coreos.com/openshift-storage-operatorgroup created
+catalogsource.operators.coreos.com/lvms-catalogsource created
+subscription.operators.coreos.com/lvms-operator created
+[zuul@controller-0 lvms]$
+```
+2. Use [lvms-namespace.yaml](lvms-namespace.yaml) to patch
+   openshift-storage namespace to set annotations.
+```
+[zuul@controller-0 lvms]$ oc apply -f lvms-namespace.yaml
+namespace/openshift-storage configured
+[zuul@controller-0 lvms]$
+```
+3. Use [lvms_cluster.yaml](lvms_cluster.yaml) to deploy the LVMS
+   cluster.
+```
+[zuul@controller-0 lvms]$ oc create -f lvms_cluster.yaml
+lvmcluster.lvm.topolvm.io/lvmcluster created
+[zuul@controller-0 lvms]$
+```
+4. Apply the [metrics-cert workaround](../docs/notes/lvms.md#metrics-cert-workaround)
+```
+oc patch csv -n openshift-storage lvms-operator.v0.0.1 --type=json \
+-p="[{'op': 'remove', 'path': '/spec/install/spec/deployments/0/spec/template/spec/containers/0/volumeMounts/1'}]"
+```
+
+5. Investigate
+
+```
+oc get sc
+oc project openshift-storage 
+oc get lvmclusters lvmcluster
+oc get pods
+```
+Look at the logs of one of the pods
+```
+$ oc logs vg-manager-5z8bn | grep vdb | tail -1 | jq .
+{
+  "level": "info",
+  "ts": "2024-04-26T23:22:36Z",
+  "msg": "device wiped successfully",
+  "controller": "lvmvolumegroup",
+  "controllerGroup": "lvm.topolvm.io",
+  "controllerKind": "LVMVolumeGroup",
+  "LVMVolumeGroup": {
+    "name": "vg1",
+    "namespace": "openshift-storage"
+  },
+  "namespace": "openshift-storage",
+  "name": "vg1",
+  "reconcileID": "55a85f4f-a129-4821-8d9f-5873b670e771",
+  "deviceName": "/dev/vdb"
+}
+$
 ```
