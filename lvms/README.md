@@ -30,9 +30,9 @@ On the the three CoreOS systems root will be mounted on `/dev/sda` but
 [zuul@controller-0 ~]$ ssh ocp-2 "lsblk"
 Warning: Permanently added '192.168.111.22' (ED25519) to the list of known hosts.
 NAME   MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
-sda      8:0    0  100G  0 disk 
-├─sda1   8:1    0    1M  0 part 
-├─sda2   8:2    0  127M  0 part 
+sda      8:0    0  100G  0 disk
+├─sda1   8:1    0    1M  0 part
+├─sda2   8:2    0  127M  0 part
 ├─sda3   8:3    0  384M  0 part /boot
 └─sda4   8:4    0 79.5G  0 part /var/lib/kubelet/pods/a0dc0880-bbdb-4ad3-ba48-07c48fa90a45/volume-subpaths/nginx-conf/monitoring-plugin/1
                                 /var
@@ -41,8 +41,8 @@ sda      8:0    0  100G  0 disk
                                 /etc
                                 /
                                 /sysroot
-vda    252:0    0   10G  0 disk 
-vdb    252:16   0   10G  0 disk 
+vda    252:0    0   10G  0 disk
+vdb    252:16   0   10G  0 disk
 [zuul@controller-0 ~]$
 ```
 
@@ -69,45 +69,101 @@ subscription.operators.coreos.com/lvms-operator created
 namespace/openshift-storage configured
 [zuul@controller-0 lvms]$
 ```
-3. Use [lvms_cluster.yaml](lvms_cluster.yaml) to deploy the LVMS
+3. Use [og.yaml](og.yaml) to create the openshift-storage-operatorgroup
+```
+[zuul@controller-0 lvms]$ oc create -f og.yaml
+operatorgroup.operators.coreos.com/openshift-storage-operatorgroup created
+[zuul@controller-0 lvms]$
+```
+4. Use [sub.yaml](sub.yaml) to create the lvms-operator subscription
+```
+oc create -f sub.yaml
+```
+5. Wait for the lvms-operator to reach state Succeeded
+```
+[zuul@controller-0 lvms]$ oc get csv -n openshift-storage -o custom-columns=Name:.metadata.name,Phase:.status.phase | grep lvms
+lvms-operator.v4.14.4                   Succeeded
+[zuul@controller-0 lvms]$
+```
+6. Use [lvms-cluster.yaml](lvms-cluster.yaml) to deploy the LVMS
    cluster.
 ```
-[zuul@controller-0 lvms]$ oc create -f lvms_cluster.yaml
+[zuul@controller-0 lvms]$ oc create -f lvms-cluster.yaml
 lvmcluster.lvm.topolvm.io/lvmcluster created
 [zuul@controller-0 lvms]$
 ```
-4. Apply the [metrics-cert workaround](../docs/notes/lvms.md#metrics-cert-workaround)
+7. Look for topolvm and vg-manager pods.
 ```
-oc patch csv -n openshift-storage lvms-operator.v0.0.1 --type=json \
--p="[{'op': 'remove', 'path': '/spec/install/spec/deployments/0/spec/template/spec/containers/0/volumeMounts/1'}]"
+[zuul@controller-0 lvms]$ oc project openshift-storage
+[zuul@controller-0 lvms]$ oc get pods
+NAME                                  READY   STATUS    RESTARTS   AGE
+lvms-operator-df5c69cd6-rbffn         3/3     Running   0          2m22s
+topolvm-controller-744976dfd4-cptv7   5/5     Running   0          60s
+topolvm-node-7mfg9                    4/4     Running   0          60s
+topolvm-node-p67mf                    4/4     Running   0          60s
+topolvm-node-stfqk                    4/4     Running   0          60s
+vg-manager-8lv96                      1/1     Running   0          60s
+vg-manager-nb5wl                      1/1     Running   0          60s
+vg-manager-xpzw2                      1/1     Running   0          60s
+[zuul@controller-0 lvms]$
 ```
-
-5. Investigate
-
+8. Get the status of the lvmclusters
 ```
-oc get sc
-oc project openshift-storage 
-oc get lvmclusters lvmcluster
-oc get pods
-```
-Look at the logs of one of the pods
-```
-$ oc logs vg-manager-5z8bn | grep vdb | tail -1 | jq .
+[zuul@controller-0 lvms]$ oc get lvmclusters lvmcluster
+NAME         STATUS
+lvmcluster   Ready
+[zuul@controller-0 lvms]$ oc get lvmclusters.lvm.topolvm.io -o jsonpath='{.items[*].status}' | jq .
 {
-  "level": "info",
-  "ts": "2024-04-26T23:22:36Z",
-  "msg": "device wiped successfully",
-  "controller": "lvmvolumegroup",
-  "controllerGroup": "lvm.topolvm.io",
-  "controllerKind": "LVMVolumeGroup",
-  "LVMVolumeGroup": {
-    "name": "vg1",
-    "namespace": "openshift-storage"
-  },
-  "namespace": "openshift-storage",
-  "name": "vg1",
-  "reconcileID": "55a85f4f-a129-4821-8d9f-5873b670e771",
-  "deviceName": "/dev/vdb"
+  "deviceClassStatuses": [
+    {
+      "name": "vg1",
+      "nodeStatus": [
+        {
+          "devices": [
+            "/dev/vda",
+            "/dev/vdb"
+          ],
+          "node": "master-0",
+          "status": "Ready"
+        },
+        {
+          "devices": [
+            "/dev/vda",
+            "/dev/vdb"
+          ],
+          "node": "master-2",
+          "status": "Ready"
+        },
+        {
+          "devices": [
+            "/dev/vda",
+            "/dev/vdb"
+          ],
+          "node": "master-1",
+          "status": "Ready"
+        }
+      ]
+    }
+  ],
+  "ready": true,
+  "state": "Ready"
 }
-$
+[zuul@controller-0 lvms]$
+```
+9. Use [test/test-pv.yaml](test/test-pv.yaml) and [test/test-pvc.yaml](test/test-pvc.yaml)
+   to create a test PV and PVC.
+```
+[zuul@controller-0 test]$ oc create -f test-pv.yaml
+persistentvolume/test-pv created
+[zuul@controller-0 test]$ oc create -f test-pvc.yaml
+persistentvolumeclaim/test-pvc created
+[zuul@controller-0 test]$
+```
+10. Check if the PV is available
+```
+[zuul@controller-0 test]$ oc get pvc  | grep lvms
+test-pvc                                          Pending                                                        lvms-vg1        14s
+[zuul@controller-0 test]$ oc get pv  | grep lvms
+test-pv                    1Gi        RWO            Retain           Available                                                               lvms-vg1                 26s
+[zuul@controller-0 test]$
 ```
