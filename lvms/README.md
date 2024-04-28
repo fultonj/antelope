@@ -150,20 +150,47 @@ lvmcluster   Ready
 }
 [zuul@controller-0 lvms]$
 ```
-9. Use [test/test-pv.yaml](test/test-pv.yaml) and [test/test-pvc.yaml](test/test-pvc.yaml)
-   to create a test PV and PVC.
+9. Use [test/test-pvc.yaml](test/test-pvc.yaml) and [test/test-pod.yaml](test/test-pod.yaml)
+   to create a test PVC and pod to use it.
 ```
-[zuul@controller-0 test]$ oc create -f test-pv.yaml
-persistentvolume/test-pv created
 [zuul@controller-0 test]$ oc create -f test-pvc.yaml
 persistentvolumeclaim/test-pvc created
+[zuul@controller-0 test]$ oc create -f test-pod.yaml 
+pod/my-pod created
+[zuul@controller-0 test]$
+
+```
+10. Check if the PVC was able to be bound
+```
+[zuul@controller-0 test]$ oc get pvc
+NAME       STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+test-pvc   Bound    pvc-79eb0543-d203-4b36-9098-f33e5bf5e3fa   1Gi        RWO            lvms-vg1       107s
 [zuul@controller-0 test]$
 ```
-10. Check if the PV is available
+and used by the pod
 ```
-[zuul@controller-0 test]$ oc get pvc  | grep lvms
-test-pvc                                          Pending                                                        lvms-vg1        14s
-[zuul@controller-0 test]$ oc get pv  | grep lvms
-test-pv                    1Gi        RWO            Retain           Available                                                               lvms-vg1                 26s
-[zuul@controller-0 test]$
+[zuul@controller-0 lvms]$ oc get pod my-pod
+NAME     READY   STATUS    RESTARTS   AGE
+my-pod   1/1     Running   0          8m37s
+[zuul@controller-0 lvms]$ oc get pod my-pod -o yaml | grep volumeMounts -A 2
+    volumeMounts:
+    - mountPath: /data
+      name: my-volume
+[zuul@controller-0 lvms]$
+
+[zuul@controller-0 lvms]$ oc get pod my-pod -o yaml | grep volumes -A 3
+  volumes:
+  - name: my-volume
+    persistentVolumeClaim:
+      claimName: test-pvc
+[zuul@controller-0 lvms]$
+```
+
+```
+[zuul@controller-0 lvms]$ oc rsh my-pod
+# mount | grep data
+/dev/topolvm/423a6b61-cd7c-4ba7-b8bd-94b1b26fccc6 on /data type ext4 (rw,relatime,seclabel,stripe=32)
+# ls /data
+lost+found
+#
 ```
