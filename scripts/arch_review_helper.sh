@@ -35,19 +35,11 @@ function build_va1 {
     kustomize build control-plane/nncp > $TARGET/nncp.yaml
     kustomize build control-plane > $TARGET/control-plane.yaml
     # dataplane-pre-ceph
-    if [[ $BRANCH == "main" ]]; then
-        kustomize build edpm-pre-ceph > $TARGET/dataplane-pre-ceph.yaml
-    else
-        kustomize build edpm-pre-ceph/nodeset > $TARGET/dataplane-nodeset-pre-ceph.yaml
-        kustomize build edpm-pre-ceph/deployment > $TARGET/dataplane-deployment-pre-ceph.yaml
-    fi
+    kustomize build edpm-pre-ceph/nodeset > $TARGET/dataplane-nodeset-pre-ceph.yaml
+    kustomize build edpm-pre-ceph/deployment > $TARGET/dataplane-deployment-pre-ceph.yaml
     # post-ceph
-    if [[ $BRANCH == "main" ]]; then
-        kustomize build > $TARGET/dataplane-post-ceph.yaml
-    else
-        kustomize build > $TARGET/nodeset-post-ceph.yaml
-        kustomize build deployment > $TARGET/deployment-post-ceph.yaml
-    fi
+    kustomize build > $TARGET/nodeset-post-ceph.yaml
+    kustomize build deployment > $TARGET/deployment-post-ceph.yaml
     tree $TARGET
     popd > /dev/null
 }
