@@ -27,4 +27,4 @@ cifmw_devscripts_config_overrides:
 On the the three CoreOS systems root will be mounted on `/dev/sda` but
 `/dev/vda` and `/dev/vdb` will be available to back LVMS.
 
-To get a feel of what Ansible has to automate read [manual](manual.md).
+To get a feel of what Ansible has to automate see the [example CRs](cr/).
