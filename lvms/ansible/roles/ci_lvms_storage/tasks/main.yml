@@ -14,22 +14,39 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+- name: Ensure cifmw_devscripts_config_overrides has vm_extradisks_list
+  fail:
+    msg: >-
+      cifmw_devscripts_config_overrides does not have a vm_extradisks_list
+      of disks like 'vdb vda'
+  when:
+    - cifmw_devscripts_config_overrides is not defined or
+      cifmw_devscripts_config_overrides.vm_extradisks_list is not defined or
+      cifmw_devscripts_config_overrides.vm_extradisks_list | length == 0 or
+      cifmw_devscripts_config_overrides.vm_extradisks_list.split(' ') | length == 0
+
 - name: Create role needed directories
   ansible.builtin.file:
     path: "{{ cifmw_lvms_manifests_dir }}"
     state: directory
 
-- name: Put the lvms-namespace.yaml manifest file in place
+- name: Put the manifest files in place
   ansible.builtin.template:
-    src: templates/lvms-namespace.yaml.j2
-    dest: "{{ cifmw_lvms_manifests_dir }}/lvms-namespace.yaml"
+    src: "templates/{{ item }}.yaml.j2"
+    dest: "{{ cifmw_lvms_manifests_dir }}/{{ item }}.yaml"
     mode: 0644
     force: true
+  loop:
+    - lvms-namespace
+    - operator-group
+    - subscription
+    - lvms-cluster
 
-- name: Apply LVMS namespace manifest file
+- name: Apply LVMS namespace manifest file and set annotations
   kubernetes.core.k8s:
     kubeconfig: "{{ cifmw_openshift_kubeconfig  }}"
     api_key: "{{ cifmw_openshift_token | default(omit) }}"
     context: "{{ cifmw_openshift_context | default(omit)  }}"
-    state: present
     src: "{{ cifmw_lvms_manifests_dir }}/lvms-namespace.yaml"
+    state: present
+    wait: true

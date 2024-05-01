@@ -19,8 +19,9 @@
     kubeconfig: "{{ cifmw_openshift_kubeconfig  }}"
     api_key: "{{ cifmw_openshift_token | default(omit) }}"
     context: "{{ cifmw_openshift_context | default(omit)  }}"
-    state: absent
     src: "{{ cifmw_lvms_manifests_dir }}/lvms-namespace.yaml"
+    state: absent
+    wait: true
 
 - name: Remove role needed directories
   ansible.builtin.file:

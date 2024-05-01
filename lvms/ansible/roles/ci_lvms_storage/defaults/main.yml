@@ -21,3 +21,8 @@ cifmw_lvms_namespace: openshift-storage
 cifmw_lvms_basedir: "{{ cifmw_basedir | default(ansible_user_dir ~ '/ci-framework-data') }}"
 cifmw_lvms_manifests_dir: "{{ cifmw_manifests | default(cifmw_lvms_basedir ~ '/artifacts/manifests') }}/lvms"
 cifmw_lvms_storage_class: local-storage
+cifmw_lvms_fstype: ext4
+cifmw_lvms_force_wipe_devices_and_destroy_all_data: true
+cifmw_lvms_thin_pool_name: cifmw_lvms_thin_pool
+cifmw_lvms_thin_pool_size_percent: 90
+cifmw_lvms_thin_pool_overprovision_ratio: 10
