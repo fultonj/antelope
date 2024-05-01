@@ -1,0 +1,23 @@
+---
+- name: LVMS test playbook
+  gather_facts: false
+  hosts: localhost ansible_connection=local
+  vars:
+    cleanup: true
+    cifmw_lvms_manifests_dir: crs
+    cifmw_openshift_kubeconfig: "~/.kube/config"
+
+    cifmw_devscripts_config_overrides:
+      vm_extradisks: "true"
+      vm_extradisks_list: "vdb vda"
+      vm_extradisks_size: "10G"
+  tasks:
+    - name: Configure Storage Class
+      ansible.builtin.include_role:
+        name: ci_lvms_storage
+
+    - name: Configure Storage Class
+      ansible.builtin.include_role:
+        name: ci_lvms_storage
+        tasks_from: cleanup.yml
+      when: cleanup
