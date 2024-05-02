@@ -42,11 +42,69 @@
     - subscription
     - lvms-cluster
 
-- name: Apply LVMS namespace manifest file and set annotations
+- name: Apply lvms-operator namespace manifest file with annotations
   kubernetes.core.k8s:
     kubeconfig: "{{ cifmw_openshift_kubeconfig  }}"
     api_key: "{{ cifmw_openshift_token | default(omit) }}"
     context: "{{ cifmw_openshift_context | default(omit)  }}"
     src: "{{ cifmw_lvms_manifests_dir }}/lvms-namespace.yaml"
     state: present
-    wait: true
+
+- name: Wait for lvms-operator namespace to be active
+  kubernetes.core.k8s_info:
+    kubeconfig: "{{ cifmw_openshift_kubeconfig  }}"
+    api_key: "{{ cifmw_openshift_token | default(omit) }}"
+    context: "{{ cifmw_openshift_context | default(omit)  }}"
+    kind: Namespace
+    name: "{{ cifmw_lvms_namespace }}"
+  register: namespace_info
+  until: namespace_info.resources[0].status.phase == "Active"
+  retries: 30
+  delay: 10
+
+- name: Apply lvms-operator group manifest file
+  kubernetes.core.k8s:
+    kubeconfig: "{{ cifmw_openshift_kubeconfig  }}"
+    api_key: "{{ cifmw_openshift_token | default(omit) }}"
+    context: "{{ cifmw_openshift_context | default(omit)  }}"
+    src: "{{ cifmw_lvms_manifests_dir }}/operator-group.yaml"
+    state: present
+
+- name: Ensure we can get info from lvms-operator group
+  kubernetes.core.k8s_info:
+    kubeconfig: "{{ cifmw_openshift_kubeconfig  }}"
+    api_key: "{{ cifmw_openshift_token | default(omit) }}"
+    context: "{{ cifmw_openshift_context | default(omit)  }}"
+    kind: OperatorGroup
+    name: "{{ cifmw_lvms_namespace }}-operatorgroup"
+    namespace: "{{ cifmw_lvms_namespace }}"
+  register: og_info
+  until: og_info.failed == false
+  retries: 30
+  delay: 10
+
+- name: Apply lvms-operator subscription manifest file
+  kubernetes.core.k8s:
+    kubeconfig: "{{ cifmw_openshift_kubeconfig  }}"
+    api_key: "{{ cifmw_openshift_token | default(omit) }}"
+    context: "{{ cifmw_openshift_context | default(omit)  }}"
+    src: "{{ cifmw_lvms_manifests_dir }}/subscription.yaml"
+    state: present
+
+- name: Wait for lvms operator pod to be running
+  kubernetes.core.k8s_info:
+    kubeconfig: "{{ cifmw_openshift_kubeconfig  }}"
+    api_key: "{{ cifmw_openshift_token | default(omit) }}"
+    context: "{{ cifmw_openshift_context | default(omit)  }}"
+    kind: Pod
+    namespace: "{{ cifmw_lvms_namespace }}"
+    label_selectors:
+      - app.kubernetes.io/name=lvms-operator
+  register: lvms_op_pod
+  until:
+    - lvms_op_pod.resources | length > 0
+    - lvms_op_pod.resources[0].status is defined
+    - lvms_op_pod.resources[0].status.phase is defined
+    - lvms_op_pod.resources[0].status.phase == "Running"
+  retries: 30
+  delay: 10

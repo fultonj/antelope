@@ -14,14 +14,19 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-- name: Ensure the LVMS namespace is absent
+- name: Ensure manifest files are absent
   kubernetes.core.k8s:
     kubeconfig: "{{ cifmw_openshift_kubeconfig  }}"
     api_key: "{{ cifmw_openshift_token | default(omit) }}"
     context: "{{ cifmw_openshift_context | default(omit)  }}"
-    src: "{{ cifmw_lvms_manifests_dir }}/lvms-namespace.yaml"
+    src: "{{ cifmw_lvms_manifests_dir }}/{{ item }}.yaml"
     state: absent
     wait: true
+  ignore_errors: true
+  loop:
+    - subscription
+    - operator-group
+    - lvms-namespace
 
 - name: Remove role needed directories
   ansible.builtin.file:
