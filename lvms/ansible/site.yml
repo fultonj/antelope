@@ -4,7 +4,8 @@
   hosts: localhost ansible_connection=local
   vars:
     create: false
-    report: true
+    report: false
+    test: true
     cleanup: false
     cifmw_lvms_manifests_dir: crs
     cifmw_openshift_kubeconfig: "~/.kube/config"
@@ -25,6 +26,12 @@
         name: ci_lvms_storage
         tasks_from: status.yml
       when: report
+
+    - name: Test the Storage Class
+      ansible.builtin.include_role:
+        name: ci_lvms_storage
+        tasks_from: test.yml
+      when: test
 
     - name: Clean up Storage Class
       ansible.builtin.include_role:
