@@ -3,20 +3,30 @@
   gather_facts: false
   hosts: localhost ansible_connection=local
   vars:
-    cleanup: true
+    create: false
+    report: true
+    cleanup: false
     cifmw_lvms_manifests_dir: crs
     cifmw_openshift_kubeconfig: "~/.kube/config"
+    cifmw_lvms_namespace: openshift-storage2
 
     cifmw_devscripts_config_overrides:
       vm_extradisks: "true"
       vm_extradisks_list: "vdb vda"
       vm_extradisks_size: "10G"
   tasks:
-    - name: Configure Storage Class
+    - name: Create Storage Class
       ansible.builtin.include_role:
         name: ci_lvms_storage
+      when: create
 
-    - name: Configure Storage Class
+    - name: Report on Storage Class
+      ansible.builtin.include_role:
+        name: ci_lvms_storage
+        tasks_from: status.yml
+      when: report
+
+    - name: Clean up Storage Class
       ansible.builtin.include_role:
         name: ci_lvms_storage
         tasks_from: cleanup.yml

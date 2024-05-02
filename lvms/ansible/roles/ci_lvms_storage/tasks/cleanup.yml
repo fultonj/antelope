@@ -24,6 +24,7 @@
     wait: true
   ignore_errors: true
   loop:
+    - lvms-cluster
     - subscription
     - operator-group
     - lvms-namespace

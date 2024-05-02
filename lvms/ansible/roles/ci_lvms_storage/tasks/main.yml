@@ -108,3 +108,33 @@
     - lvms_op_pod.resources[0].status.phase == "Running"
   retries: 30
   delay: 10
+
+- name: Apply lvms-cluster manifest file
+  kubernetes.core.k8s:
+    kubeconfig: "{{ cifmw_openshift_kubeconfig  }}"
+    api_key: "{{ cifmw_openshift_token | default(omit) }}"
+    context: "{{ cifmw_openshift_context | default(omit)  }}"
+    src: "{{ cifmw_lvms_manifests_dir }}/lvms-cluster.yaml"
+    state: present
+
+- name: Wait for vg-manger and topolvm controller and node to be running
+  kubernetes.core.k8s_info:
+    kubeconfig: "{{ cifmw_openshift_kubeconfig  }}"
+    api_key: "{{ cifmw_openshift_token | default(omit) }}"
+    context: "{{ cifmw_openshift_context | default(omit)  }}"
+    kind: Pod
+    namespace: "{{ cifmw_lvms_namespace }}"
+    label_selectors:
+      - "app.kubernetes.io/component={{ item }}"
+  register: topolvm_pod
+  until:
+    - topolvm_pod.resources | length > 0
+    - topolvm_pod.resources[0].status is defined
+    - topolvm_pod.resources[0].status.phase is defined
+    - topolvm_pod.resources[0].status.phase == "Running"
+  retries: 30
+  delay: 10
+  loop:
+    - vg-manager
+    - topolvm-controller
+    - topolvm-node
