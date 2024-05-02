@@ -46,8 +46,8 @@
     - pvc.resources[0].status is defined
     - pvc.resources[0].status.phase is defined
     - pvc.resources[0].status.phase == "Pending"
-  retries: 30
-  delay: 10
+  retries: "{{ cifmw_lvms_retries }}"
+  delay: "{{ cifmw_lvms_delay }}"
 
 - name: Display test PVC info
   debug:
@@ -75,8 +75,8 @@
     - pod.resources[0].status is defined
     - pod.resources[0].status.phase is defined
     - pod.resources[0].status.phase == "Running"
-  retries: 30
-  delay: 10
+  retries: "{{ cifmw_lvms_retries }}"
+  delay: "{{ cifmw_lvms_delay }}"
 
 - name: Display test pod volumes
   debug:

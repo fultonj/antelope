@@ -59,8 +59,8 @@
     name: "{{ cifmw_lvms_namespace }}"
   register: namespace_info
   until: namespace_info.resources[0].status.phase == "Active"
-  retries: 30
-  delay: 10
+  retries: "{{ cifmw_lvms_retries }}"
+  delay: "{{ cifmw_lvms_delay }}"
 
 - name: Apply lvms-operator group manifest file
   kubernetes.core.k8s:
@@ -80,8 +80,8 @@
     namespace: "{{ cifmw_lvms_namespace }}"
   register: og_info
   until: og_info.failed == false
-  retries: 30
-  delay: 10
+  retries: "{{ cifmw_lvms_retries }}"
+  delay: "{{ cifmw_lvms_delay }}"
 
 - name: Apply lvms-operator subscription manifest file
   kubernetes.core.k8s:
@@ -106,8 +106,8 @@
     - lvms_op_pod.resources[0].status is defined
     - lvms_op_pod.resources[0].status.phase is defined
     - lvms_op_pod.resources[0].status.phase == "Running"
-  retries: 30
-  delay: 10
+  retries: "{{ cifmw_lvms_retries }}"
+  delay: "{{ cifmw_lvms_delay }}"
 
 - name: Apply lvms-cluster manifest file
   kubernetes.core.k8s:
@@ -132,8 +132,8 @@
     - topolvm_pod.resources[0].status is defined
     - topolvm_pod.resources[0].status.phase is defined
     - topolvm_pod.resources[0].status.phase == "Running"
-  retries: 30
-  delay: 10
+  retries: "{{ cifmw_lvms_retries }}"
+  delay: "{{ cifmw_lvms_delay }}"
   loop:
     - vg-manager
     - topolvm-controller
