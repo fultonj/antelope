@@ -1,0 +1,26 @@
+---
+cifmw_tempest_tempestconf_config:
+    overrides: |
+      auth.tempest_roles swiftoperator
+      auth.admin_username admin
+      auth.admin_project_name admin
+      auth.admin_domain_name Default      
+      object-storage-feature-enabled.discoverability false
+      compute-feature-enabled.attach_encrypted_volume true
+      compute-feature-enabled.live_migration true
+      compute-feature-enabled.volume_multiattach true
+      volume-feature-enabled.extend_attached_volume true
+      volume-feature-enabled.volume_revert true
+      volume.volume_type_multiattach multiattach
+      share.capability_storage_protocol CEPHFS
+      share.run_share_group_tests False
+      share.suppress_errors_in_cleanup True
+      share.enable_cephx_rules_for_protocols cephfs
+      share.storage_protocol CEPHFS
+      share.enable_cert_rules_for_protocols ""
+      share.enable_ip_rules_for_protocols ""
+      share.storage_network storage
+      ds_neutron_plugin_options.mechanism_driver ovn
+      neutron_plugin_options.available_type_drivers geneve
+    remove: |
+      network-feature-enabled.api_extensions dhcp_agent_scheduler,qos,trunk
