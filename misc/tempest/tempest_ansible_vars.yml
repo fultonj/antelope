@@ -1,10 +1,13 @@
 ---
 cifmw_tempest_tempestconf_config:
     overrides: |
-      auth.tempest_roles swiftoperator
+      auth.tempest_roles member
       auth.admin_username admin
       auth.admin_project_name admin
-      auth.admin_domain_name Default      
+      auth.admin_domain_name Default
+      object-storage.operator_role admin
+      object-storage.reseller_admin_role ResellerAdmin
+      object-storage-feature-enabled.discoverability false
       object-storage-feature-enabled.discoverability false
       compute-feature-enabled.attach_encrypted_volume true
       compute-feature-enabled.live_migration true
@@ -24,3 +27,10 @@ cifmw_tempest_tempestconf_config:
       neutron_plugin_options.available_type_drivers geneve
     remove: |
       network-feature-enabled.api_extensions dhcp_agent_scheduler,qos,trunk
+
+cifmw_test_operator_tempest_exclude_list: |
+  # https://bugzilla.redhat.com/2209078
+  ^tempest.api.object_storage.test_container_services.ContainerTest.test_create_container_with_remove_metadata_key
+  ^tempest.api.object_storage.test_container_services.ContainerTest.test_create_container_with_remove_metadata_value
+  # https://bugzilla.redhat.com/2284026
+  ^tempest.api.object_storage.test_container_services.ContainerTest.test_update_container_me
