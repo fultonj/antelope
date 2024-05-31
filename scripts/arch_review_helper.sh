@@ -58,5 +58,12 @@ build_va1 /tmp/old
 switch_branch $TESTED_BRANCH
 
 echo "Compare \"$TESTED_BRANCH\" in /tmp/new to \"main\" in /tmp/old"
-
+echo ""
+echo "diff -u /tmp/{old,new}/control-plane.yaml"
+echo "diff -u /tmp/{old,new}/dataplane-deployment-pre-ceph.yaml"
+echo "diff -u /tmp/{old,new}/dataplane-nodeset-pre-ceph.yaml"
+echo "diff -u /tmp/{old,new}/deployment-post-ceph.yaml"
+echo "diff -u /tmp/{old,new}/nncp.yaml"
+echo "diff -u /tmp/{old,new}/nodeset-post-ceph.yaml"
+echo ""
 popd > /dev/null
