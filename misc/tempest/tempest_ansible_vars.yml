@@ -29,6 +29,9 @@ cifmw_tempest_tempestconf_config:
       network-feature-enabled.api_extensions dhcp_agent_scheduler,qos,trunk
 
 cifmw_test_operator_tempest_exclude_list: |
+  # https://bugzilla.redhat.com/2284163
+  ^tempest.api.object_storage.test_container_services.ContainerTest.test_update_container_metadata_with_delete_metadata
+  ^tempest.api.object_storage.test_container_services.ContainerTest.test_update_container_metadata_with_delete_metadata_key
   # https://bugzilla.redhat.com/2209078
   ^tempest.api.object_storage.test_container_services.ContainerTest.test_create_container_with_remove_metadata_key
   ^tempest.api.object_storage.test_container_services.ContainerTest.test_create_container_with_remove_metadata_value
