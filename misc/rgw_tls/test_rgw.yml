@@ -1,0 +1,29 @@
+---
+- name: Playbook to test RGW 
+  gather_facts: true
+  hosts: computes[0]
+  vars:
+    cifmw_openshift_kubeconfig: "~/.kube/config"
+    cifmw_cephadm_ceph_spec_fqdn: false
+    cifmw_cephadm_fsid: 553930fd-ad56-5f0a-a950-0611f6f061ed
+  tasks:
+    - include_vars: roles/cifmw_cephadm/defaults/main.yml
+
+    # normally these are called in pre.yml
+    - name: Check if cifmw_cephadm_certificate path exists
+      ansible.builtin.stat:
+        path: "{{ cifmw_cephadm_certificate }}"
+      register: cert_stat_result
+      when:
+        - cifmw_cephadm_certificate | length > 0
+        - cert_stat_result is undefined
+
+    - name: Check if cifmw_cephadm_key path exists
+      ansible.builtin.stat:
+        path: "{{ cifmw_cephadm_key }}"
+      register: key_stat_result
+      when:
+        - cifmw_cephadm_key | length > 0
+        - key_stat_result is undefined
+      
+    - include_tasks: roles/cifmw_cephadm/tasks/rgw.yml

@@ -1,0 +1,24 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: external-rgw-ingress
+  namespace: openstack
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  tls:
+  - hosts:
+    - 192.168.122.81
+    secretName: cert-ceph-rgw
+  rules:
+  - host: rgw-public.openstack.svc
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: external-rgw-service
+            port:
+              number: 8080

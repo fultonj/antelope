@@ -1,0 +1,8 @@
+  servers:
+  - forwardPlugin:
+      policy: Random
+      upstreams:
+      - DNS:53
+    name: ceph
+    zones:
+    - ceph.local

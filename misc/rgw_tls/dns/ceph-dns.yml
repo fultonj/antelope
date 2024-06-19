@@ -1,0 +1,27 @@
+---
+apiVersion: network.openstack.org/v1beta1
+kind: DNSData
+metadata:
+  labels:
+    component: ceph-storage
+    service: ceph
+  name: ceph-storage
+  namespace: openstack
+spec:
+  dnsDataLabelSelectorValue: dnsdata
+  hosts:
+  - hostnames:
+    - compute-0.ceph.local
+    ip: 192.168.122.100
+  - hostnames:
+    - compute-1.ceph.local
+    ip: 192.168.122.101
+  - hostnames:
+    - compute-2.ceph.local
+    ip: 192.168.122.102
+  - hostnames:
+    - rgw-internal.ceph.local
+    ip: 192.168.122.2
+  - hostnames:
+    - rgw-external.ceph.local
+    ip: 192.168.122.2
