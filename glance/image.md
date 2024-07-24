@@ -1,5 +1,8 @@
 # Build your own Glance operator image
 
+This guide is to build your own glace-operator image. To build your
+own glance-api image see the [glance-image document](glance-image.md).
+
 Use the quay.io web interface to create an encrypted password and
 confirm it works with `podman login`.
 ```

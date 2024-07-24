@@ -5,6 +5,7 @@ My notes for working on the
 
 - [Run local copy of the Glance operator](local.md)
 - [Build your own Glance operator image](image.md)
+- [Build your own Glance API image](glance-image.md)
 - [Run Glance kuttl tests](kuttl.md)
 - [Run Glance env tests](env_tests.md)
 - [Run a minimal control plane with Glance](minimal.md)
