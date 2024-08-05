@@ -1,0 +1,35 @@
+---
+cifmw_reproducer_repositories:
+  - src: "https://github.com/fultonj/architecture"
+    dest: "/home/zuul/src/github.com/openstack-k8s-operators/architecture"
+    version: standard
+
+cifmw_deploy_architecture: true
+
+cifmw_devscripts_config_overrides_patch_do_stuff:
+  openshift_version: "4.16.1"
+
+# LVMS
+cifmw_use_lvms: true
+cifmw_lvms_disk_list:
+  - /dev/vda
+  - /dev/vdb
+
+# Ceph workaround
+cifmw_ceph_spec_public_network: "{{ cifmw_networking_definition.networks.ctlplane.network }}"
+
+# SUSHY
+# cifmw_use_sushy_emulator: false
+cifmw_sushy_emulator_libvirt_user: "{{ ansible_user_id }}"
+cifmw_sushy_emulator_hypervisor_target_connection_ip: "{{ cifmw_networking_definition.networks.ctlplane.gateway }}"
+
+
+## STOP EARLY
+# cifmw_deploy_architecture_stopper: pre_kustomize_stage_0
+## CREATE CRs manually
+# ./deploy-architecture.sh --tags infra,edpm -e cifmw_kustomize_deploy_generate_crs_only=true -e cifmw_deploy_architecture_stopper=post_apply_stage_3
+
+# DCN
+# cifmw_libvirt_manager_compute_amount: 10
+# cifmw_kustomize_deploy_generate_crs_only: true
+# cifmw_deploy_architecture_stopper: post_apply_stage_3
