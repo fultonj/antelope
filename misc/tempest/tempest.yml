@@ -13,7 +13,7 @@ spec:
   openStackConfigMap: openstack-config
   openStackConfigSecret: openstack-config-secret
   parallel: false
-  storageClass: local-storage
+  storageClass: lvms-local-storage
   tempestRun:
     concurrency: 8
     includeList: |
