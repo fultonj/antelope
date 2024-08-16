@@ -20,6 +20,17 @@ spec:
       ^tempest.api.object_storage.*
       ^tempest.scenario.test_object_storage_basic_ops.*
     excludeList: |
+      # https://bugzilla.redhat.com/2102593
+      ^tempest.api.object_storage.test_container_quotas.ContainerQuotasTest.test_upload_too_many_objects
+      # https://bugzilla.redhat.com/2284163
+      ^tempest.api.object_storage.test_container_services.ContainerTest.test_update_container_metadata_with_delete_metadata
+      ^tempest.api.object_storage.test_container_services.ContainerTest.test_update_container_metadata_with_delete_metadata_key
+      # https://bugzilla.redhat.com/2209078
+      ^tempest.api.object_storage.test_container_services.ContainerTest.test_create_container_with_remove_metadata_key
+      ^tempest.api.object_storage.test_container_services.ContainerTest.test_create_container_with_remove_metadata_value
+      # https://bugzilla.redhat.com/2284026
+      ^tempest.api.object_storage.test_container_services.ContainerTest.test_update_container_metadata_with_create_and_delete_metadata
+      # other excludes
       ^tempest.api.compute.admin.test_auto_allocate_network.AutoAllocateNetworkTest.test_server_multi_create_auto_allocate
       ^tempest.api.compute.admin.test_live_migration.LiveMigrationTest.test_live_block_migration_paused
       ^tempest.api.compute.admin.test_live_migration.LiveAutoBlockMigrationV225Test.test_live_block_migration_paused
