@@ -8,12 +8,15 @@ PVC=${PVC:-"0"}
 DEPS=${DEPS:-"0"}
 OPER=${OPER:-"0"}
 CONTROL=${CONTROL:-"0"}
+CONTROL_SIMPLE=${CONTROL_SIMPLE:-"0"}
 CONTROL_MTU=${CONTROL_MTU:-"0"}
 EDPM_NODE=${EDPM_NODE:-"0"}
+EDPM_SIMPLE=${EDPM_SIMPLE:-"0"}
 EDPM_DEPLOY_PREP=${EDPM_DEPLOY_PREP:-"0"}
+TEST_SIMPLE=${TEST_SIMPLE:-"0"}
 
 # node0 node1 node2
-NODES=2
+NODES=1
 NODE_START=0
 ADOPT=0
 
@@ -22,18 +25,16 @@ if [[ $LVMS -gt 0 && $PVC -gt 0 ]]; then
     exit 1
 fi
 
-if [[ -z /usr/local/bin/yq ]]; then
-    # install yq if it is missing
-    export URL=https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
-    sudo wget -qO /usr/local/bin/yq $URL
-    sudo chmod a+x /usr/local/bin/yq
-fi
-
 if [[ ! -d ~/install_yamls ]]; then
     echo "Error: ~/install_yamls is missing"
     exit 1
 fi
 pushd ~/install_yamls/devsetup
+
+if [[ ! -e ~/bin/kustomize ]]; then
+    echo "No kustomize. Running 'make download_tools'"
+    make download_tools
+fi
 
 if [ $CRC -eq 1 ]; then
     if [[ ! -e pull-secret.txt ]]; then
@@ -134,6 +135,10 @@ if [[ $(oc get pods -n openstack-operators | grep controller | wc -l) -eq 0 ]]; 
     exit 1
 fi
 
+if [ $CONTROL_SIMPLE -eq 1 ]; then
+    make openstack_deploy
+fi
+
 if [ $CONTROL -eq 1 ]; then
     make netconfig_deploy
     make openstack_deploy
@@ -177,6 +182,10 @@ fi
 
 cd devsetup
 
+if [ $EDPM_SIMPLE -eq 1 ]; then
+    DATAPLANE_TOTAL_NODES=2 make edpm_wait_deploy
+fi
+
 if [ $EDPM_NODE -eq 1 ]; then
     for I in $(seq $NODE_START $NODES); do
         if [[ $I -eq 0 && $ADOPT -eq 1 ]]; then
@@ -209,4 +218,8 @@ if [ $EDPM_DEPLOY_PREP -eq 1 ]; then
     mv dataplane-1.yaml $TARGET
     rm dataplane-0.yaml
     popd
+fi
+
+if [ $TEST_SIMPLE  -eq 1 ]; then
+    make edpm_deploy_instance
 fi

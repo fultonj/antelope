@@ -16,7 +16,6 @@ The following VMs are deployed
 - crc: hosts control plane pods
 - edpm-compute-0: standard edpm compute node
 - edpm-compute-1: standard edpm compute node
-- edpm-compute-2: standard edpm compute node
 
 ## Prepare
 
@@ -28,8 +27,24 @@ tags set to `1` (unless otherwise indicated other tags are `0`).
 - `PVC` and `DEPS`
 - `OPER`
 
-Set `CONTROL` to `1` and while the control plane is still coming up
-build the EDPM nodes sequentially with the following tags set to `1`.
+## Simple Deployment
+
+Set the following to `1` and sequentially run deploy and that's it.
+
+- `CONTROL_SIMPLE`
+- `EDPM_SIMPLE`
+- `TEST_SIMPLE`
+
+## Deployment with Preparation
+
+I don't always use `make openstack_deploy` or `make edpm_deploy`
+because I like to have an unapplied CR file to modify before starting
+the deployment. In that case I use `make *_deploy_prep` commands as
+described here.
+
+Set `CONTROL` to `1` and while the control plane is still
+coming up build the EDPM nodes sequentially with the following tags
+set to `1`.
 
 - `EDPM_NODE`
 - `EDPM_DEPLOY_PREP`
@@ -38,7 +53,7 @@ When `oc get pods` shows that `nova-api` and `dnsmasq-dns` are running
 the contorl plane should be ready.
 
 You should then have a working control plane running on `crc`
-and `edpm-compute-{0,1,2}` will be ready to be configured by Ansible.
+and `edpm-compute-{0,1}` will be ready to be configured by Ansible.
 Use [ssh_node.sh](../scripts/ssh_node.sh) for a command to use
 to SSH into `edpm-compute-0`.
 
@@ -57,8 +72,8 @@ popd
 
 The CR comes from running `make edpm_deploy_prep` from
 [install_yamls](https://github.com/openstack-k8s-operators/install_yamls/tree/main#deploy-dev-env-using-crc-edpm-nodes-with-isolated-networks).
-I don't use `make edpm_deploy` because I like to have a CR file to
-review and modify before I start the deployment.
+I don't always use `make edpm_deploy` because I like to have a CR file
+to review and modify before I start the deployment.
 
 The CR should only contain an OpenStackDataPlane
 [NodeSet](https://openstack-k8s-operators.github.io/dataplane-operator/openstack_dataplanenodeset)
