@@ -11,12 +11,13 @@ CONTROL=${CONTROL:-"0"}
 CONTROL_SIMPLE=${CONTROL_SIMPLE:-"0"}
 CONTROL_MTU=${CONTROL_MTU:-"0"}
 EDPM_NODE=${EDPM_NODE:-"0"}
-EDPM_SIMPLE=${EDPM_SIMPLE:-"0"}
+EDPM_DEPLOY=${EDPM_SIMPLE:-"0"}
 EDPM_DEPLOY_PREP=${EDPM_DEPLOY_PREP:-"0"}
 TEST_SIMPLE=${TEST_SIMPLE:-"0"}
 
 # node0 node1 node2
-NODES=1
+# deploy one node
+NODES=0
 NODE_START=0
 ADOPT=0
 
@@ -182,10 +183,6 @@ fi
 
 cd devsetup
 
-if [ $EDPM_SIMPLE -eq 1 ]; then
-    DATAPLANE_TOTAL_NODES=2 make edpm_wait_deploy
-fi
-
 if [ $EDPM_NODE -eq 1 ]; then
     for I in $(seq $NODE_START $NODES); do
         if [[ $I -eq 0 && $ADOPT -eq 1 ]]; then
@@ -218,6 +215,15 @@ if [ $EDPM_DEPLOY_PREP -eq 1 ]; then
     mv dataplane-1.yaml $TARGET
     rm dataplane-0.yaml
     popd
+fi
+
+if [ $EDPM_DEPLOY -eq 1 ]; then
+    pushd ~/install_yamls
+    make edpm_deploy
+    popd
+    sleep 5
+    echo "oc get pods -w -l app=openstackansibleee"
+    oc get pods -w -l app=openstackansibleee
 fi
 
 if [ $TEST_SIMPLE  -eq 1 ]; then

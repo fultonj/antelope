@@ -32,7 +32,8 @@ tags set to `1` (unless otherwise indicated other tags are `0`).
 Set the following to `1` and sequentially run deploy and that's it.
 
 - `CONTROL_SIMPLE`
-- `EDPM_SIMPLE`
+- `EDPM_NODE`
+- `EDPM_DEPLOY`
 - `TEST_SIMPLE`
 
 ## Deployment with Preparation
