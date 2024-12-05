@@ -227,5 +227,7 @@ if [ $EDPM_DEPLOY -eq 1 ]; then
 fi
 
 if [ $TEST_SIMPLE  -eq 1 ]; then
+    pushd ~/install_yamls/devsetup
     make edpm_deploy_instance
+    popd
 fi
