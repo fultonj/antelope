@@ -10,3 +10,4 @@ My notes for working on the
 - [Run Glance env tests](env_tests.md)
 - [Run a minimal control plane with Glance](minimal.md)
 - [Distributed Image Import](dist_import.md)
+- [TopologySpreadConstraints and Affinity / Anti-Affinity](topo.md)

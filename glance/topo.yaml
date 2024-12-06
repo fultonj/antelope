@@ -1,0 +1,14 @@
+apiVersion: topology.openstack.org/v1beta1
+kind: Topology
+metadata:
+  name: default-sample
+  namespace: openstack
+spec:
+  name: topology-default
+  topologySpreadConstraint:
+  - maxSkew: 1
+    topologyKey: "topology.kubernetes.io/zone" # Spread evenly across zones
+    whenUnsatisfiable: DoNotSchedule
+    labelSelector:
+      matchLabels:
+        app: glance
