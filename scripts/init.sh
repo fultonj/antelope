@@ -10,6 +10,6 @@ fi
 
 CRC=1 bash deploy.sh
 ATTACH=1 bash deploy.sh
-LVMS=1 bash deploy.sh
+PVC=1 bash deploy.sh
 DEPS=1 bash deploy.sh
 
