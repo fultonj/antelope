@@ -4,67 +4,60 @@ These are my notes on deploying a minimal Glance environment for
 development.
 
 Unlike [standard](../docs/standard.md) it only runs the following
-control plane services.
+control plane services and does not use the openstack operator.
 
 - galera
-- keystone
-- glance
+- rabbitmq
 - memcached
-- openstackclient
-- dnsmasq-dns
-- ovn-controller
+- keystone
 
-## Deploy Operators
+## Deploy Dependent Services
 
 With a new hypervisor first run [init.sh](../scripts/init.sh).
 
-Use [deploy.sh](../scripts/deploy.sh) with `OPER` set to 1.
+Directly Deploy Dependent Services with `install_yamls`.
+```
+    pushd ~/install_yamls
 
-If desired replace the glance operator deployed by `OPER`
-with your [own image](image.md) or a [local copy](local.md).
+    make mariadb
+    make mariadb_deploy
 
-## Deploy Control Plane
+    make rabbitmq
+    make rabbitmq_deploy
 
-Use [deploy.sh](../scripts/deploy.sh) with `CONTROL` set to `1`.
+    make infra
 
-Use the
-[control plane minimal overlay](../crs/control_plane/overlay/minimal)
-to have kustomize modify the CR prepared by `install_yamls`.
+    make memcached_deploy
+
+    make keystone
+    make keystone_deploy
+    
+    popd
+```
+Or use [minimal.sh](minimal.sh).
+
+When running this I like to watch from two terminals:
+
+- term1: `oc get pods -w -n openstack-operators`
+- term2: `oc get pods -w -n openstack`
+
+## Run Local Glance Operator
 
 ```
-pushd ~/antelope/crs/
-kustomize build control_plane/overlay/minimal > control.yaml
-oc apply -f control.yaml
-popd
+cd ~/glance-operator
+for c in $(ls config/crd/bases/); { oc create -f config/crd/bases/$c; }
+make run-with-webhook
 ```
+This is like running a [local copy](local.md) but there is nothing
+to scale down first.
 
-By default the minimal overlay sets glance replicas to 0 so use
-[replica.sh](replica.sh) to change glance's replica count.
-
-After Glance is deployed inspect the default configuration built by
-its operator.
+## Deploy Glance
 
 ```
-oc get secret glance-config-data -o json | jq -r '.data."00-config.conf"' | base64 -d
+cd ~/glance-operator/config/samples/layout/
+kustomize build single | oc apply -f -
 ```
-
-## Clean
-
+Use the following to remove the deployment.
 ```
-pushd ~/install_yamls
-make openstack_deploy_cleanup # rm control-plane
-make openstack_cleanup        # rm operators
-popd
+kustomize build single | oc delete -f -
 ```
-
-After cleaning resume at "Deploy Operators" or "Deploy Control Plane"
-and skip running init.sh.
-
-## Script
-
-[minimal.sh](minimal.sh) speeds up the above process.
-
-- CLEAN:  44 seconds
-- CTL:    20 seconds (but then glance needs 60s to come up)
-
-The above is with PVC=1 and IMG=OPER=0

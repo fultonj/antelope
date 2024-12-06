@@ -1,16 +1,12 @@
 #!/bin/bash
 
 CLEAN=1
-CTL=1
+CTL=0
 
-# Rebuild operators too?
-OPER=0
-# Install new image?
-IMG=0
 # (re)create PVCs?
 PVC=1
 # Toy Ceph Cluster?
-CEPH=1
+CEPH=0
 
 if [ $CLEAN -eq 1 ]; then
     pushd ~/install_yamls
@@ -45,43 +41,43 @@ if [ $CLEAN -eq 1 ]; then
     popd
 fi
 
-if [ $OPER -eq 1 ]; then
-    echo "Adding Operators"
-    export OPER=1
-    bash ../scripts/deploy.sh
-    unset OPER
-    echo "Waiting for openstack-operators to be running"
-    timeout 300 bash -c 'until $(oc get csv -l operators.coreos.com/openstack-operator.openstack-operators -n openstack-operators | grep -q Succeeded); do echo -n "."; sleep 1; done'
-fi
-
-if [ $IMG -eq 1 ]; then
-    echo "Deploying the following operator image"
-    grep NEW operator-image.sh | head -1
-    bash operator-image.sh
-fi
-
 if [ $CTL -eq 1 ]; then
     if [ $PVC -eq 1 ]; then
         export PVC=1
         bash ../scripts/deploy.sh
         unset PVC
     fi
-    echo "Adding Control Plane"
-    export CONTROL=1
-    bash ../scripts/deploy.sh
-    unset CONTROL
+    pushd ~/install_yamls
 
-    pushd ~/antelope/crs/
-    kustomize build control_plane/overlay/minimal > control.yaml
-    oc apply -f control.yaml
-    popd
+    # maria
+    make mariadb
+    sleep 60
+    make mariadb_deploy
 
+    # rabbmit
+    make rabbitmq
+    sleep 60
+    make rabbitmq_deploy
+
+    # infra 
+    make infra
+    sleep 60
+
+    # memached
+    make memcached_deploy
+    sleep 60
+
+    # keystone
+    make keystone
+    sleep 60
+    make keystone_deploy
+    
     if [ $CEPH -eq 1 ]; then
-	pushd ~/install_yamls
 	make ceph
         if [[ $? -gt 0 ]]; then
             make ceph
         fi
-	popd
     fi
+
+    popd
 fi

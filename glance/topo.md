@@ -12,6 +12,8 @@ to schedule the Glance pods on specific nodes.
 
 ## Get it running
 
+These steps assume you have already followed [minimal.md](minimal.md).
+
 ### infra
 
 ```
@@ -48,6 +50,3 @@ the following is added to the last line of `go.work`
 ```
 replace github.com/openstack-k8s-operators/lib-common/modules/common => ../lib-common/modules/common
 ```
-Follow [local.md](local.md) to run a local copy of the glance
-operator.
-
