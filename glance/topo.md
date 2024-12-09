@@ -115,3 +115,37 @@ glance-default-single-0      0/3     Running             0          2s
 This shows that the Glance pod is obeying the
 [Topology Spread Constraints](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints)
 defined in [topo.yaml](topo.yaml).
+
+## Proposed Three Node Testing
+
+Put two OCP nodes in Zone A and one node in Zone B.
+```
+ZoneA: node1, node2
+ZoneB: node3
+```
+Deploy one glance pod1 in Zone A and another glance pod2 in Zone B.
+
+Confirm that:
+
+- If node1 is not schedulable, glance pod1 is only scheduled on node2
+- If node3 is not schedulable, glance pod2 remains `Pending`
+
+### Make Testing Environment
+
+[Deploy a VA](https://ci-framework.pages.redhat.com/docs/main/ci-framework/deploy_va.html)
+using ci-framework. Label the nodes as seen in the [Node labels example](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/#node-labels)
+
+```
+oc label nodes master-0 node=node1 zone=zoneA --overwrite
+oc label nodes master-1 node=node2 zone=zoneA --overwrite
+oc label nodes master-2 node=node3 zone=zoneB --overwrite
+```
+
+Create `config/crd/bases/topology.openstack.org_topologies.yaml`
+as described under `infra` in the previous section.
+
+After confirming that the single node test passed in the previous
+section, create an image from the checkout of glance-operator and
+push it to quay as described in [image](image.md). Use
+[operator-image.sh](operator-image.sh) to deploy the custom
+glance-operator image with `topologyKey` support.
