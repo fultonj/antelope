@@ -162,7 +162,7 @@ replace github.com/openstack-k8s-operators/lib-common/modules/common => github.c
 and confirmed I could get the image via `podman pull
 quay.io/fultonj/glance-operator:topo`.
 
-#### Deploy the operator image
+#### Deploy the glance operator image
 
 Patch the CSV to install `quay.io/fultonj/glance-operator:topo`.
 Use [operator-image.sh](operator-image.sh).
@@ -220,3 +220,40 @@ oc rollout restart deployment glance-operator-controller-manager
 ```
 The Glance operator image should then transition from status
 `CrashLoopBackOff` to `Running`.
+
+#### Update openstack operator to use new glance operator
+
+1. Delete the existing ctlplane
+```
+oc delete oscp controlplane
+```
+
+2. clone openstack-operator locally
+```
+git clone https://github.com/openstack-k8s-operators/openstack-operator.git
+cd openstack-operator
+make
+```
+
+3. Add this line to `go.work` inside the openstack operator
+```
+replace github.com/openstack-k8s-operators/glance-operator/api => ../glance-operator/api
+```
+4. `make manifests`
+
+5. `git status` should show the updated CRDs
+```
+	modified:   apis/bases/core.openstack.org_openstackcontrolplanes.yaml
+	modified:   config/crd/bases/core.openstack.org_openstackcontrolplanes.yaml
+```
+6. delete the old CRD
+```
+oc delete crd openstackcontrolplanes.core.openstack.org
+```
+
+7. create the new CRD
+```
+$ oc create -f apis/bases/core.openstack.org_openstackcontrolplanes.yaml
+customresourcedefinition.apiextensions.k8s.io/openstackcontrolplanes.core.openstack.org created
+$
+```
