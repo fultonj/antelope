@@ -8,7 +8,7 @@ to schedule the Glance pods on specific nodes.
 
 -  [infra-operator](https://github.com/openstack-k8s-operators/infra-operator/pull/325)
 -  [lib-common](https://github.com/openstack-k8s-operators/lib-common/pull/582)
--  [glance-operator](https://github.com/fmount/glance-operator/tree/topology-1)
+-  [glance-operator](https://github.com/openstack-k8s-operators/glance-operator/pull/670)
 
 ## Single Node Testing
 
