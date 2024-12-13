@@ -162,6 +162,14 @@ replace github.com/openstack-k8s-operators/lib-common/modules/common => github.c
 and confirmed I could get the image via `podman pull
 quay.io/fultonj/glance-operator:topo`.
 
+Apply the new glance operator CRDs.
+
+```
+cd ~/glance-operator/
+for c in $(ls config/crd/bases/); { oc delete -f config/crd/bases/$c; }
+for c in $(ls config/crd/bases/); { oc create -f config/crd/bases/$c; }
+```
+
 #### Deploy the glance operator image
 
 Patch the CSV to install `quay.io/fultonj/glance-operator:topo`.
@@ -256,4 +264,115 @@ oc delete crd openstackcontrolplanes.core.openstack.org
 $ oc create -f apis/bases/core.openstack.org_openstackcontrolplanes.yaml
 customresourcedefinition.apiextensions.k8s.io/openstackcontrolplanes.core.openstack.org created
 $
+```
+
+#### Redeploy the Control Plane
+
+The control plane was deployed using
+[uni04delta](https://github.com/openstack-k8s-operators/architecture/tree/main/examples/dt/uni04delta).
+The previous sections results in the control plane being undeployed.
+Redeploy he control plane.
+
+```
+pushd ~/src/github.com/openstack-k8s-operators/architecture/
+kustomize build examples/dt/uni04delta/ > ~/control-plane.yaml
+popd
+```
+Remove all yaml sub-documents in ~/control-plane.yaml except the
+one with kind `OpenStackControlPlane` and create the control plane
+
+```
+oc create -f ~/control-plane.yaml
+```
+Observe that glance pods are running.
+```
+$ oc get pods | grep glance
+glance-1d8c4-default-external-api-0    3/3     Running     0          4m43s
+glance-1d8c4-default-external-api-1    3/3     Running     0          4m43s
+glance-1d8c4-default-external-api-2    3/3     Running     0          4m43s
+glance-1d8c4-default-internal-api-0    3/3     Running     0          4m42s
+glance-1d8c4-default-internal-api-1    3/3     Running     0          4m42s
+glance-1d8c4-default-internal-api-2    3/3     Running     0          4m42s
+glance-d42c-account-create-82kvh       0/1     Completed   0          5m25s
+glance-db-create-mkng2                 0/1     Completed   0          5m35s
+glance-db-sync-w62kh                   0/1     Completed   0          5m20s
+$
+```
+
+### Confirm glance follows topology spread constraints (3 node)
+
+Edit the control plane (`oc edit openstackcontrolplane`) and add pods
+for the A-zone and B-zone.
+
+```yaml
+      glanceAPIs:
+        azone:
+          topologyRef:
+            name: default-sample
+          customServiceConfig: |
+            [DEFAULT]
+            debug = True
+            enabled_backends = default_backend:rbd
+            [glance_store]
+            default_backend = default_backend
+            [default_backend]
+            rbd_store_ceph_conf = /etc/ceph/ceph.conf
+            store_description = "RBD backend"
+            rbd_store_pool = images
+            rbd_store_user = openstack
+          networkAttachments:
+          - storage
+          override:
+            service:
+              internal:
+                metadata:
+                  annotations:
+                    metallb.universe.tf/address-pool: internalapi
+                    metallb.universe.tf/allow-shared-ip: internalapi
+                    metallb.universe.tf/loadBalancerIPs: 172.17.0.81
+                spec:
+                  type: LoadBalancer
+          replicas: 1
+          type: edge
+        bzone:
+          topologyRef:
+            name: default-sample
+          customServiceConfig: |
+            [DEFAULT]
+            debug = True
+            enabled_backends = default_backend:rbd
+            [glance_store]
+            default_backend = default_backend
+            [default_backend]
+            rbd_store_ceph_conf = /etc/ceph/ceph.conf
+            store_description = "RBD backend"
+            rbd_store_pool = images
+            rbd_store_user = openstack
+          networkAttachments:
+          - storage
+          override:
+            service:
+              internal:
+                metadata:
+                  annotations:
+                    metallb.universe.tf/address-pool: internalapi
+                    metallb.universe.tf/allow-shared-ip: internalapi
+                    metallb.universe.tf/loadBalancerIPs: 172.17.0.82
+                spec:
+                  type: LoadBalancer
+          replicas: 1
+          type: edge
+```
+Observe that the new glance edge pods are running.
+```
+[zuul@controller-0 ~]$ oc get pods | grep glance
+glance-1d8c4-azone-edge-api-0             3/3     Running     0          85s
+glance-1d8c4-bzone-edge-api-0             3/3     Running     0          89s
+glance-1d8c4-default-external-api-0       3/3     Running     0          10m
+glance-1d8c4-default-external-api-1       3/3     Running     0          10m
+glance-1d8c4-default-external-api-2       3/3     Running     0          10m
+glance-1d8c4-default-internal-api-0       3/3     Running     0          10m
+glance-1d8c4-default-internal-api-1       3/3     Running     0          10m
+glance-1d8c4-default-internal-api-2       3/3     Running     0          10m
+[zuul@controller-0 ~]$
 ```
