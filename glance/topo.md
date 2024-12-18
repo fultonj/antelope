@@ -6,9 +6,10 @@ and
 [Affinity / Anti-Affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity)
 to schedule the Glance pods on specific nodes.
 
--  [infra-operator](https://github.com/openstack-k8s-operators/infra-operator/pull/325)
--  [lib-common](https://github.com/openstack-k8s-operators/lib-common/pull/582)
--  [glance-operator](https://github.com/openstack-k8s-operators/glance-operator/pull/670)
+- [infra-operator](https://github.com/openstack-k8s-operators/infra-operator/pull/325)
+- [lib-common](https://github.com/openstack-k8s-operators/lib-common/pull/582)
+- [glance-operator](https://github.com/openstack-k8s-operators/glance-operator/pull/670)
+- [opentsack-operator](https://github.com/fmount/openstack-operator/tree/topology-0)
 
 ## Single Node Testing
 
@@ -134,8 +135,15 @@ Confirm that:
 
 #### Deploy 3 nodes
 
-[Deploy a VA](https://ci-framework.pages.redhat.com/docs/main/ci-framework/deploy_va.html)
-using ci-framework. Label the nodes as seen in the [Node labels example](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/#node-labels)
+Follow the ci-framework documentation as if you were going to
+[deploy a VA](https://ci-framework.pages.redhat.com/docs/main/ci-framework/deploy_va.html)
+but set `cifmw_deploy_architecture=false`.
+
+There should be no `openstack` or `openstack-operators` namespaces
+but you should now have a 3-node OCP deployment. The rest of these
+should be run as zuul@controller-0.
+
+Label the nodes as seen in the [Node labels example](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/#node-labels)
 
 ```
 oc label nodes master-0 node=node1 zone=zoneA --overwrite
@@ -143,236 +151,128 @@ oc label nodes master-1 node=node2 zone=zoneA --overwrite
 oc label nodes master-2 node=node3 zone=zoneB --overwrite
 ```
 
-#### Add toplogy object
+#### Deploy OpenStack operator with custom image
 
-`oc apply -f config/crd/bases/topology.openstack.org_topologies.yaml`
-as described under `infra` in the previous section.
+fmount built an
+[openstack-operator-index image](https://quay.io/repository/fpantano/openstack-operator-index?tab=tags&tag=v0.0.3)
+based on
+[opentsack-operator](https://github.com/fmount/openstack-operator/tree/topology-0).
 
-Test it with [topo.yaml](topo.yaml) using `oc create -f topo.yaml`.
-
-#### Create glance operator image with topologyRef support
-
-Create a custom image from the
-[glance-operator with topology](https://github.com/fmount/glance-operator/tree/topology-1)
-and push it to quay as described in [image](image.md). I updated my
-`go.work` with the following:
+Use install_yamls to install it.
 ```
-replace github.com/openstack-k8s-operators/lib-common/modules/common => github.com/fmount/lib-common/modules/common v0.0.0-20241203102750-0b9fe14de0b0
+cd ~/src/github.com/openstack-k8s-operators/install_yamls/
+NETWORK_ISOLATION=false make openstack OPENSTACK_IMG=quay.io/fpantano/openstack-operator-index:v0.0.3
 ```
-and confirmed I could get the image via `podman pull
-quay.io/fultonj/glance-operator:topo`.
-
-Apply the new glance operator CRDs.
-
+Watch the opentack operators start.
 ```
-cd ~/glance-operator/
-for c in $(ls config/crd/bases/); { oc delete -f config/crd/bases/$c; }
-for c in $(ls config/crd/bases/); { oc create -f config/crd/bases/$c; }
+oc get pods -n openstack-operators -w
 ```
 
-#### Deploy the glance operator image
+#### Deploy OpenStack control plane
 
-Patch the CSV to install `quay.io/fultonj/glance-operator:topo`.
-Use [operator-image.sh](operator-image.sh).
-The new Glance operator image will crash loop until
-the permissions are set as described in the rest of this section.
+These commands should be run in
+`~/src/github.com/openstack-k8s-operators/install_yamls/`
+unless otherwise indicated
 
-Apply the [rbac/role.yaml](https://raw.githubusercontent.com/openstack-k8s-operators/glance-operator/fde4082e1e6d30165afb64e3243e36aef0ff7c28/config/rbac/role.yaml)
-from the [glance-operator with topology](https://github.com/fmount/glance-operator/tree/topology-1).
+Satisfy dependencies:
 ```
-oc project openstack-operators
-URL=https://raw.githubusercontent.com/openstack-k8s-operators/glance-operator/fde4082e1e6d30165afb64e3243e36aef0ff7c28/config/rbac/role.yaml
-oc apply -f $URL
-```
-Patch the CSV to set permissions for the new topology resource
-(`oc edit csv glance-operator.v0.0.1`). The `clusterPermissions` list
-has a `rules` list which needs the new `apiGroups` map for
-`topologies`.
-
-```diff
- install:
-    spec:
-      clusterPermissions:
-      - rules:
-         <...>
-+        - apiGroups:
-+          - topology.openstack.org
-+          resources:
-+          - topologies
-+          verbs:
-+          - get
-+          - list
-+          - patch
-+          - update
-+          - watch
-        - apiGroups:
-          - ""
-```
-Find the latest `clusterrole` for the glance-operator and patch it.
-```
-$ oc get clusterrole | grep glance-operator | grep -v metrics
-glance-operator.v0.0.1-7W0estzOtqduKMCmijJZJYaYFlj4bgqiwS3LgQ     2024-11-27T02:23:40Z
-glance-operator.v0.0.1-g-aCU6a51RZO8EJesRx5ehlUvt080HeBhtu7uhkB   2024-11-27T02:23:47Z
-$
-```
-In this case
-`oc edit clusterrole glance-operator.v0.0.1-g-aCU6a51RZO8EJesRx5ehlUvt080HeBhtu7uhkB`
-will edit the latest one.
-Set same permissions for the new topology resource as in the previous
-step but inside the `clusterrole`, i.e. look for the `clusterPermissions`
-list.
-
-Use `oc rollout` to update the deployment configuration
-```
-oc rollout restart deployment glance-operator-controller-manager
-```
-The Glance operator image should then transition from status
-`CrashLoopBackOff` to `Running`.
-
-#### Update openstack operator to use new glance operator
-
-1. Delete the existing ctlplane
-```
-oc delete oscp controlplane
-```
-
-2. clone openstack-operator locally
-```
-git clone https://github.com/openstack-k8s-operators/openstack-operator.git
-cd openstack-operator
-make
-```
-
-3. Add this line to `go.work` inside the openstack operator
-```
-replace github.com/openstack-k8s-operators/glance-operator/api => ../glance-operator/api
-```
-4. `make manifests`
-
-5. `git status` should show the updated CRDs
-```
-	modified:   apis/bases/core.openstack.org_openstackcontrolplanes.yaml
-	modified:   config/crd/bases/core.openstack.org_openstackcontrolplanes.yaml
-```
-6. delete the old CRD
-```
-oc delete crd openstackcontrolplanes.core.openstack.org
-```
-
-7. create the new CRD
-```
-$ oc create -f apis/bases/core.openstack.org_openstackcontrolplanes.yaml
-customresourcedefinition.apiextensions.k8s.io/openstackcontrolplanes.core.openstack.org created
-$
-```
-
-#### Redeploy the Control Plane
-
-The control plane was deployed using
-[uni04delta](https://github.com/openstack-k8s-operators/architecture/tree/main/examples/dt/uni04delta).
-The previous sections results in the control plane being undeployed.
-Redeploy he control plane.
-
-```
-pushd ~/src/github.com/openstack-k8s-operators/architecture/
-kustomize build examples/dt/uni04delta/ > ~/control-plane.yaml
+pushd devsetup
+make download_tools
 popd
+make crc_storage
 ```
-Remove all yaml sub-documents in ~/control-plane.yaml except the
-one with kind `OpenStackControlPlane` and create the control plane
+
+Deploy the control plane
+```
+NETWORK_ISOLATION=false make openstack_deploy
+```
+
+Patch the control plane to add a default topology:
+```
+oc patch openstackcontrolplane $(oc get oscp -o custom-columns=NAME:.metadata.name --no-headers) --type=merge -p='{"spec": {"topology": {"maxSkew": 1, "topologyKey": "topology.kubernetes.io/zone", "whenUnsatisfiable": "DoNotSchedule"}}}' -n openstack
+```
+View the topology
+```
+oc get topology
+```
+
+Use [storage-topology.yaml](storage-topology.yaml) to create a storage
+topology.
 
 ```
-oc create -f ~/control-plane.yaml
+oc create -f storage-topology.yaml
 ```
-Observe that glance pods are running.
+
+Patch glance to point to the new topology.
+
 ```
-$ oc get pods | grep glance
-glance-1d8c4-default-external-api-0    3/3     Running     0          4m43s
-glance-1d8c4-default-external-api-1    3/3     Running     0          4m43s
-glance-1d8c4-default-external-api-2    3/3     Running     0          4m43s
-glance-1d8c4-default-internal-api-0    3/3     Running     0          4m42s
-glance-1d8c4-default-internal-api-1    3/3     Running     0          4m42s
-glance-1d8c4-default-internal-api-2    3/3     Running     0          4m42s
-glance-d42c-account-create-82kvh       0/1     Completed   0          5m25s
-glance-db-create-mkng2                 0/1     Completed   0          5m35s
-glance-db-sync-w62kh                   0/1     Completed   0          5m20s
+oc patch openstackcontrolplane $(oc get oscp -o custom-columns=NAME:.metadata.name --no-headers) --type=merge -p='{"spec": {"glance": {"template": {"glanceAPIs": {"default": {"topologyRef": {"name":"storage-topology", "namespace":"openstack"}}}}}}}' -n openstack
+```
+
+#### Observe Glance
+
+```
+$ oc get glanceapi  glance-default-external -o json | jq ".spec.topologyRef"
+{
+  "name": "storage-topology",
+  "namespace": "openstack"
+}
 $
 ```
 
-### Confirm glance follows topology spread constraints (3 node)
-
-Edit the control plane (`oc edit openstackcontrolplane`) and add pods
-for the A-zone and B-zone.
-
-```yaml
-      glanceAPIs:
-        azone:
-          topologyRef:
-            name: default-sample
-          customServiceConfig: |
-            [DEFAULT]
-            debug = True
-            enabled_backends = default_backend:rbd
-            [glance_store]
-            default_backend = default_backend
-            [default_backend]
-            rbd_store_ceph_conf = /etc/ceph/ceph.conf
-            store_description = "RBD backend"
-            rbd_store_pool = images
-            rbd_store_user = openstack
-          networkAttachments:
-          - storage
-          override:
-            service:
-              internal:
-                metadata:
-                  annotations:
-                    metallb.universe.tf/address-pool: internalapi
-                    metallb.universe.tf/allow-shared-ip: internalapi
-                    metallb.universe.tf/loadBalancerIPs: 172.17.0.81
-                spec:
-                  type: LoadBalancer
-          replicas: 1
-          type: edge
-        bzone:
-          topologyRef:
-            name: default-sample
-          customServiceConfig: |
-            [DEFAULT]
-            debug = True
-            enabled_backends = default_backend:rbd
-            [glance_store]
-            default_backend = default_backend
-            [default_backend]
-            rbd_store_ceph_conf = /etc/ceph/ceph.conf
-            store_description = "RBD backend"
-            rbd_store_pool = images
-            rbd_store_user = openstack
-          networkAttachments:
-          - storage
-          override:
-            service:
-              internal:
-                metadata:
-                  annotations:
-                    metallb.universe.tf/address-pool: internalapi
-                    metallb.universe.tf/allow-shared-ip: internalapi
-                    metallb.universe.tf/loadBalancerIPs: 172.17.0.82
-                spec:
-                  type: LoadBalancer
-          replicas: 1
-          type: edge
 ```
-Observe that the new glance edge pods are running.
+$ oc get sts glance-default-external-api -o json | jq ".spec.template.spec.topologySpreadConstraints"
+[
+  {
+    "labelSelector": {
+      "matchLabels": {
+        "app": "glance"
+      }
+    },
+    "maxSkew": 1,
+    "topologyKey": "topology.kubernetes.io/zone",
+    "whenUnsatisfiable": "ScheduleAnyway"
+  }
+]
+$
 ```
-[zuul@controller-0 ~]$ oc get pods | grep glance
-glance-1d8c4-azone-edge-api-0             3/3     Running     0          85s
-glance-1d8c4-bzone-edge-api-0             3/3     Running     0          89s
-glance-1d8c4-default-external-api-0       3/3     Running     0          10m
-glance-1d8c4-default-external-api-1       3/3     Running     0          10m
-glance-1d8c4-default-external-api-2       3/3     Running     0          10m
-glance-1d8c4-default-internal-api-0       3/3     Running     0          10m
-glance-1d8c4-default-internal-api-1       3/3     Running     0          10m
-glance-1d8c4-default-internal-api-2       3/3     Running     0          10m
-[zuul@controller-0 ~]$
+
+```
+
+$ oc get sts glance-default-external-api -o json | jq ".spec.template.spec.affinity"
+{
+  "podAntiAffinity": {
+    "preferredDuringSchedulingIgnoredDuringExecution": [
+      {
+        "podAffinityTerm": {
+          "labelSelector": {
+            "matchExpressions": [
+              {
+                "key": "service",
+                "operator": "In",
+                "values": [
+                  "glance",
+                  "ceph",
+                  "manila",
+                  "cinder"
+                ]
+              }
+            ]
+          },
+          "topologyKey": "kubernetes.io/hostname"
+        },
+        "weight": 80
+      }
+    ]
+  }
+}
+$
+```
+
+```
+$ oc get pod glance-default-external-api-0 -o yaml | grep nodeName
+  nodeName: master-1
+$ oc get pod glance-default-internal-api-0 -o yaml | grep nodeName
+  nodeName: master-0
+$
 ```

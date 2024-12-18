@@ -1,0 +1,29 @@
+---
+apiVersion: topology.openstack.org/v1beta1
+kind: Topology
+metadata:
+  name: storage-topology
+  namespace: openstack
+spec:
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: service
+              operator: In
+              values:
+              - glance
+              - ceph
+              - manila
+              - cinder
+          topologyKey: kubernetes.io/hostname
+        weight: 80
+  topologySpreadConstraint:
+  - maxSkew: 1
+    topologyKey: "topology.kubernetes.io/zone" # Spread evenly across zones
+    whenUnsatisfiable: ScheduleAnyway
+    labelSelector:
+      matchLabels:
+        app: glance
