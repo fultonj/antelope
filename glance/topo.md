@@ -117,19 +117,7 @@ This shows that the Glance pod is obeying the
 [Topology Spread Constraints](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints)
 defined in [topo.yaml](topo.yaml).
 
-## Proposed Three Node Testing
-
-Put two OCP nodes in Zone A and one node in Zone B.
-```
-ZoneA: node1, node2
-ZoneB: node3
-```
-Deploy one glance pod1 in Zone A and another glance pod2 in Zone B.
-
-Confirm that:
-
-- If node1 is not schedulable, glance pod1 is only scheduled on node2
-- If node3 is not schedulable, glance pod2 remains `Pending`
+## Three Node Testing
 
 ### Make Testing Environment
 
@@ -142,14 +130,6 @@ but set `cifmw_deploy_architecture=false`.
 There should be no `openstack` or `openstack-operators` namespaces
 but you should now have a 3-node OCP deployment. The rest of these
 should be run as zuul@controller-0.
-
-Label the nodes as seen in the [Node labels example](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/#node-labels)
-
-```
-oc label nodes master-0 node=node1 zone=zoneA --overwrite
-oc label nodes master-1 node=node2 zone=zoneA --overwrite
-oc label nodes master-2 node=node3 zone=zoneB --overwrite
-```
 
 #### Deploy OpenStack operator with custom image
 
@@ -269,10 +249,113 @@ $ oc get sts glance-default-external-api -o json | jq ".spec.template.spec.affin
 $
 ```
 
+### Create a topology for glance edge pods (3 node)
+
+Put two OCP nodes in Zone A and one node in Zone B.
 ```
-$ oc get pod glance-default-external-api-0 -o yaml | grep nodeName
-  nodeName: master-1
-$ oc get pod glance-default-internal-api-0 -o yaml | grep nodeName
+ZoneA: node1, node2
+ZoneB: node3
+```
+Deploy one glance pod1 in Zone A and another glance pod2 in Zone B.
+
+Confirm that:
+
+- If node1 is not schedulable, glance pod1 is only scheduled on node2
+- If node3 is not schedulable, glance pod2 remains `Pending`
+
+Label the nodes as seen in the [Node labels example](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/#node-labels)
+
+```
+oc label nodes master-0 node=node1 zone=zoneA --overwrite
+oc label nodes master-1 node=node2 zone=zoneA --overwrite
+oc label nodes master-2 node=node3 zone=zoneB --overwrite
+```
+
+The steps in the previous section produce a glance pod which uses
+this `topologyRef`:
+
+```yaml
+          topologyRef:
+            name: storage-topology
+```
+Create two new topologies: [a-zone-topo.yaml](a-zone-topo.yaml) and
+[b-zone-topo.yaml](b-zone-topo.yaml).
+
+```yaml
+$ oc create -f a-zone-topo.yaml
+topology.topology.openstack.org/a-zone-topo created
+$ oc create -f b-zone-topo.yaml
+topology.topology.openstack.org/b-zone-topo created
+$
+```
+
+Use `oc edit openstackcontrolplane` and search for `glance:`
+Under `glanceAPIs` add two news entries under `default` to
+run a glance pod called `azone` in zone A and glance pod called
+`bzone` in zone B.
+
+```yaml
+      glanceAPIs:
+        azone:
+          topologyRef:
+            name: a-zone-topo
+          replicas: 1
+          type: edge
+        bzone:
+          topologyRef:
+            name: b-zone-topo
+          replicas: 1
+          type: edge
+```
+Observe the pods:
+```
+$ oc get pods | grep glance | grep zone
+glance-azone-edge-api-0     3/3     Running     0          4m20s
+glance-bzone-edge-api-0     3/3     Running     0          4m
+$
+```
+Observe where the pods are running.
+```
+$ oc get pod glance-azone-edge-api-0 -o yaml | grep nodeName
+  nodeName: master-2
+$ oc get pod glance-bzone-edge-api-0 -o yaml | grep nodeName
   nodeName: master-0
 $
 ```
+I'd expect the opposite given the labeling.
+
+My pod has the `topologySpreadConstraints`.
+
+```
+$ oc get pod glance-azone-edge-api-0 -o yaml | grep topologySpreadConstraint -A 5
+  topologySpreadConstraints:
+  - labelSelector:
+      matchLabels:
+        zone: zoneA
+    maxSkew: 1
+    topologyKey: zone
+$
+```
+
+Is it because my pod itself needs to be labled?
+
+```
+$ oc get pod glance-azone-edge-api-0 -o yaml | grep labels -A 5
+  labels:
+    apps.kubernetes.io/pod-index: "0"
+    component: glance-api
+    controller-revision-hash: glance-azone-edge-api-95b5749f8
+    glanceAPI: glance-azone-edge
+    owner: glance-azone-edge
+```
+
+I ran `oc edit pod glance-azone-edge-api-0` to add this:
+
+```yaml
+  labels:
+    zone: zoneA
+    apps.kubernetes.io/pod-index: "0"
+```
+
+Though that doesn't de-schedule the pod and if I kill it, then it
+won't bring it back without that pod label.

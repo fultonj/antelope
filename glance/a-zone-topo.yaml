@@ -1,0 +1,14 @@
+---
+apiVersion: topology.openstack.org/v1beta1
+kind: Topology
+metadata:
+  name: a-zone-topo
+  namespace: openstack
+spec:
+  topologySpreadConstraint:
+  - maxSkew: 1
+    topologyKey: "zone"
+    whenUnsatisfiable: DoNotSchedule
+    labelSelector:
+      matchLabels:
+        zone: zoneA
