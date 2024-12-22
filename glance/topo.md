@@ -324,38 +324,128 @@ $
 ```
 I'd expect the opposite given the labeling.
 
-My pod has the `topologySpreadConstraints`.
+#### Update Toplogies
 
-```
-$ oc get pod glance-azone-edge-api-0 -o yaml | grep topologySpreadConstraint -A 5
-  topologySpreadConstraints:
-  - labelSelector:
-      matchLabels:
-        zone: zoneA
-    maxSkew: 1
-    topologyKey: zone
+The pods could be scheduled in the desired way after a lot of changes.
+
+- The so-called "a-zone" pod has been scheduled to be in zone B.
+- The so-called "b-zone" pod has been scheduled to be in zone A.
+
+I should have updated this example to rename the pods since they've
+been scheduled backwards. Regardless, I was able to see the scheduler
+take action in the zones.
+
+We see the "a-zone" pod is pending and other pods are running.
+```shell
+$ oc get pods | grep glance | grep zone
+glance-azone-edge-api-0            0/3     Pending     0          46h
+glance-bzone-edge-api-0            3/3     Running     0          46h
+glance-default-external-api-0      3/3     Running     0          46h
+glance-default-internal-api-0      3/3     Running     0          46h
 $
 ```
-
-Is it because my pod itself needs to be labled?
-
+The "b-zone" pod is running on a node in zone A.
+```shell
+$ oc get pod glance-bzone-edge-api-0 -o yaml | grep nodeName
+  nodeName: master-0
+$
 ```
-$ oc get pod glance-azone-edge-api-0 -o yaml | grep labels -A 5
-  labels:
-    apps.kubernetes.io/pod-index: "0"
-    component: glance-api
-    controller-revision-hash: glance-azone-edge-api-95b5749f8
-    glanceAPI: glance-azone-edge
-    owner: glance-azone-edge
+The default pods are also running in zone A.
+```shell
+$ oc get pod glance-default-external-api-0 -o yaml | grep nodeName
+  nodeName: master-1
+$ oc get pod glance-default-internal-api-0 -o yaml | grep nodeName
+  nodeName: master-0
+$
 ```
-
-I ran `oc edit pod glance-azone-edge-api-0` to add this:
-
+The `oscp` CR glance section looks like this:
 ```yaml
-  labels:
-    zone: zoneA
-    apps.kubernetes.io/pod-index: "0"
+        glanceAPIs:
+          azone:
+            replicas: 1
+            topologyRef:
+              name: b-zone-topo
+            type: edge
+          bzone:
+            replicas: 1
+            type: edge
+          default:
+            replicas: 1
+            type: split
+        secret: osp-secret
+        serviceUser: glance
+        storage:
+          storageRequest: 10G
+        topologyRef:
+          name: storage-topology
+      uniquePodNames: false
+```
+So all glance pods will inherit the `topologyRef` called
+`storage-topology` except the "azone" pod which has an override so
+that it uses the `topologyRef` called `b-zone-topo`.
+
+This [storage-topology.yaml](storage-topology.yaml) version
+results in glance pods being scheduled on nodes in zone A
+and ensures that those pods are spread scheduled, i.e. the
+second pod wont' be scheduled on the same node; this is desirable
+since if that node becomes unavailable and the other node is still
+running then the redundant pod can cover for the missing service.
+
+The [b-zone-topo-update.yaml](b-zone-topo-update.yaml) represents the
+current b-zone topology which differs like this from
+[b-zone-topo.yaml](b-zone-topo.yaml).
+
+```diff
+diff --git a/glance/b-zone-topo.yaml b/glance/b-zone-topo.yaml
+index e9c8f5d..46a6191 100644
+--- a/glance/b-zone-topo.yaml
++++ b/glance/b-zone-topo.yaml
+@@ -1,4 +1,3 @@
+----
+ apiVersion: topology.openstack.org/v1beta1
+ kind: Topology
+ metadata:
+@@ -6,9 +5,9 @@ metadata:
+   namespace: openstack
+ spec:
+   topologySpreadConstraint:
+-  - maxSkew: 1
+-    topologyKey: "zone"
+-    whenUnsatisfiable: DoNotSchedule
+-    labelSelector:
++  - labelSelector:
+       matchLabels:
+-        zone: zoneB
++        api-name: azone
++    maxSkew: 2
++    topologyKey: zoneB
++    whenUnsatisfiable: DoNotSchedule
 ```
 
-Though that doesn't de-schedule the pod and if I kill it, then it
-won't bring it back without that pod label.
+The above `b-zone-topo` results in nodes being scheduled in zone B.
+Because my environment only has one node in zone B the pod is not
+scheduled. This is because the openstack-k8s-operators always inject
+the following `podAntiAffinity`.
+```yaml
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: service
+              operator: In
+              values:
+              - glance
+          topologyKey: kubernetes.io/hostname
+        weight: 80
+```
+The above ensures that a node with a different hostname can host
+additional pods, i.e. it implements something similar to the
+topology spread in [b-zone-topo-update.yaml](b-zone-topo-update.yaml).
+
+Because there is only one node in zone-b, the pod which should run
+there (the unfortunately named glance-azone-edge-api-0), remains
+in `pending`. I expect that if zone-b had an additional node that
+it would be scheduled. I'll confirm this by redeploying my
+environment with more OCP nodes.
+

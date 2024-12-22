@@ -1,4 +1,3 @@
----
 apiVersion: topology.openstack.org/v1beta1
 kind: Topology
 metadata:
@@ -6,6 +5,14 @@ metadata:
   namespace: openstack
 spec:
   affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: topology.kubernetes.io/zone
+            operator: In
+            values:
+            - zoneA
     podAntiAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
       - podAffinityTerm:
@@ -15,15 +22,12 @@ spec:
               operator: In
               values:
               - glance
-              - ceph
-              - manila
-              - cinder
           topologyKey: kubernetes.io/hostname
         weight: 80
   topologySpreadConstraint:
-  - maxSkew: 1
-    topologyKey: "topology.kubernetes.io/zone" # Spread evenly across zones
-    whenUnsatisfiable: ScheduleAnyway
-    labelSelector:
+  - labelSelector:
       matchLabels:
-        app: glance
+        service: glance
+    maxSkew: 3
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: ScheduleAnyway
