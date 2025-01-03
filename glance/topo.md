@@ -192,60 +192,44 @@ oc patch openstackcontrolplane $(oc get oscp -o custom-columns=NAME:.metadata.na
 #### Observe Glance
 
 ```
-$ oc get glanceapi  glance-default-external -o json | jq ".spec.topologyRef"
-{
-  "name": "storage-topology",
-  "namespace": "openstack"
-}
+$  oc get glanceapi  glance-default-external -o yaml | yq ".spec.topologyRef"
+name: storage-topology
+namespace: openstack
 $
 ```
 
 ```
-$ oc get sts glance-default-external-api -o json | jq ".spec.template.spec.topologySpreadConstraints"
-[
-  {
-    "labelSelector": {
-      "matchLabels": {
-        "app": "glance"
-      }
-    },
-    "maxSkew": 1,
-    "topologyKey": "topology.kubernetes.io/zone",
-    "whenUnsatisfiable": "ScheduleAnyway"
-  }
-]
+$ oc get sts glance-default-external-api -o yaml | yq ".spec.template.spec.topologySpreadConstraints"
+- labelSelector:
+    matchLabels:
+      service: glance
+  maxSkew: 3
+  topologyKey: topology.kubernetes.io/zone
+  whenUnsatisfiable: ScheduleAnyway
 $
 ```
 
 ```
-
-$ oc get sts glance-default-external-api -o json | jq ".spec.template.spec.affinity"
-{
-  "podAntiAffinity": {
-    "preferredDuringSchedulingIgnoredDuringExecution": [
-      {
-        "podAffinityTerm": {
-          "labelSelector": {
-            "matchExpressions": [
-              {
-                "key": "service",
-                "operator": "In",
-                "values": [
-                  "glance",
-                  "ceph",
-                  "manila",
-                  "cinder"
-                ]
-              }
-            ]
-          },
-          "topologyKey": "kubernetes.io/hostname"
-        },
-        "weight": 80
-      }
-    ]
-  }
-}
+$ oc get sts glance-default-external-api -o yaml | yq ".spec.template.spec.affinity"
+nodeAffinity:
+  requiredDuringSchedulingIgnoredDuringExecution:
+    nodeSelectorTerms:
+      - matchExpressions:
+          - key: topology.kubernetes.io/zone
+            operator: In
+            values:
+              - zoneA
+podAntiAffinity:
+  preferredDuringSchedulingIgnoredDuringExecution:
+    - podAffinityTerm:
+        labelSelector:
+          matchExpressions:
+            - key: service
+              operator: In
+              values:
+                - glance
+        topologyKey: kubernetes.io/hostname
+      weight: 80
 $
 ```
 
@@ -449,3 +433,63 @@ in `pending`. I expect that if zone-b had an additional node that
 it would be scheduled. I'll confirm this by redeploying my
 environment with more OCP nodes.
 
+## Four Node Testing
+
+### Make Testing Environment
+
+Follow the ci-framework documentation as if you were going to
+[deploy a VA](https://ci-framework.pages.redhat.com/docs/main/ci-framework/deploy_va.html)
+but set `cifmw_deploy_architecture=false`.
+
+Use
+[uni02beta](https://github.com/openstack-k8s-operators/architecture/blob/main/examples/dt/uni02beta/README.md)
+since it deploys four OCP nodes and pass the following so it doesn't
+complain about missing parameters (which will not be used anyway).
+
+```yaml
+cifmw_architecture_netapp: {}
+cifmw_architecture_user_kustomize: {}
+```
+
+There should be no `openstack` or `openstack-operators` namespaces
+but you should now have a 4-node OCP deployment. The rest of these
+should be run as zuul@controller-0.
+
+```
+$ oc get nodes
+NAME       STATUS   ROLES                         AGE   VERSION
+master-0   Ready    control-plane,master,worker   7d    v1.29.5+58452d8
+master-1   Ready    control-plane,master,worker   7d    v1.29.5+58452d8
+master-2   Ready    control-plane,master,worker   7d    v1.29.5+58452d8
+worker-0   Ready    worker                        7d    v1.29.5+58452d8
+$
+```
+
+Ensure the LVMS storage class is available.
+```
+$ oc get sc
+NAME                           PROVISIONER   RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+lvms-local-storage (default)   topolvm.io    Delete          WaitForFirstConsumer   true                   7d
+$
+```
+The
+[ci_lvms_storage](https://github.com/openstack-k8s-operators/ci-framework/tree/main/roles/ci_lvms_storage)
+Ansible role can help with this.
+
+Do not run `make crc_storage`.
+
+When deploying the control plane use the following:
+```
+STORAGE_CLASS=lvms-local-storage NETWORK_ISOLATION=false make openstack_deploy
+```
+
+Label the nodes as seen in the [Node labels example](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/#node-labels)
+
+```
+oc label nodes master-0 node=node1 zone=zoneA --overwrite
+oc label nodes master-1 node=node2 zone=zoneA --overwrite
+oc label nodes master-2 node=node3 zone=zoneB --overwrite
+oc label nodes worker-0 node=node4 zone=zoneB --overwrite
+```
+
+Use `oc get nodes --show-labels` to confirm the lables were applied.
