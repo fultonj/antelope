@@ -35,3 +35,23 @@ It also ensures that my architecture fork is used. The
 of my fork disables Horizon but I can keep it update with other
 changes I might want to test or I can just update
 `cifmw_reproducer_repositories` to pull from a different source.
+
+## SSH into OCP nodes
+
+From the zuul account on the hypervisor get the IPs.
+
+```
+[zuul@osp-storage-01 ~]$ oc get nodes -o wide  | awk '{print $1,$6}'
+NAME INTERNAL-IP
+master-0 192.168.111.10
+master-1 192.168.111.11
+master-2 192.168.111.12
+worker-1 192.168.111.21
+worker-2 192.168.111.22
+worker-3 192.168.111.23
+[zuul@osp-storage-01 ~]$
+```
+Then use the SSH key in `ci-framework-data` as the `core` user.
+```
+ssh -i ~/ci-framework-data/artifacts/cifmw_ocp_access_key core@192.168.111.21
+```
