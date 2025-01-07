@@ -1,0 +1,24 @@
+- name: LVMS playbook
+  gather_facts: false
+  hosts: all
+  vars:
+    ansible_user_dir: /home/zuul
+    cifmw_openshift_kubeconfig: "~/.kube/config"
+    cifmw_lvms_disk_list:
+      - /dev/vda
+      - /dev/vdb
+      - /dev/vdc
+    cifmw_devscripts_config_overrides:
+      vm_extradisks: "true"
+      vm_extradisks_list: "vdb vda vdc"
+      vm_extradisks_size: "100G"
+  tasks:
+    - name: Create Storage Class
+      ansible.builtin.include_role:
+        name: ci_lvms_storage
+
+    - name: Report on Storage Class
+      ansible.builtin.include_role:
+        name: ci_lvms_storage
+        tasks_from: status.yml
+
