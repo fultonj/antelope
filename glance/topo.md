@@ -433,39 +433,57 @@ in `pending`. I expect that if zone-b had an additional node that
 it would be scheduled. I'll confirm this by redeploying my
 environment with more OCP nodes.
 
-## Four Node Testing
+## Multi Node Testing
 
 ### Make Testing Environment
 
 Follow the ci-framework documentation as if you were going to
 [deploy a VA](https://ci-framework.pages.redhat.com/docs/main/ci-framework/deploy_va.html)
-but set `cifmw_deploy_architecture=false`.
+but let `cifmw_deploy_architecture` default to false.
 
-Use
-[uni02beta](https://github.com/openstack-k8s-operators/architecture/blob/main/examples/dt/uni02beta/README.md)
-since it deploys four OCP nodes and pass the following so it doesn't
-complain about missing parameters (which will not be used anyway).
-
-```yaml
-cifmw_architecture_netapp: {}
-cifmw_architecture_user_kustomize: {}
+I use
+[va-pidone](https://github.com/openstack-k8s-operators/ci-framework/blob/main/scenarios/reproducers/va-pidone.yml)
+since it deploys seven OCP nodes. For example:
 ```
-
+ansible-playbook \
+     -i custom/inventory.yml \
+     -e cifmw_target_host=hypervisor-1 \
+     -e @scenarios/reproducers/networking-definition.yml \
+     -e @scenarios/reproducers/va-pidone.yml \
+     -e @custom/default-vars.yml \
+     reproducer.yml
+```
+If you have both masters and workers then
+[devscripts](https://ci-framework.readthedocs.io/en/latest/roles/devscripts.html)
+makes the masters unschedulable by default. Make the masters schedulable:
+```
+oc patch scheduler cluster --type=merge -p '{"spec": {"mastersSchedulable": true}}'
+```
+If for some reason the nodes have `SchedulingDisabled` uncordon them:
+```
+oc adm uncordon master-0 master-1 master-2 worker-0 worker-1 worker-2 worker-3
+```
 There should be no `openstack` or `openstack-operators` namespaces
-but you should now have a 4-node OCP deployment. The rest of these
-should be run as zuul@controller-0.
-
+but you should now have a 7-node OCP deployment.
 ```
 $ oc get nodes
-NAME       STATUS   ROLES                         AGE   VERSION
-master-0   Ready    control-plane,master,worker   7d    v1.29.5+58452d8
-master-1   Ready    control-plane,master,worker   7d    v1.29.5+58452d8
-master-2   Ready    control-plane,master,worker   7d    v1.29.5+58452d8
-worker-0   Ready    worker                        7d    v1.29.5+58452d8
-$
+NAME       STATUS   ROLES                         AGE    VERSION
+master-0   Ready    control-plane,master,worker   142m   v1.29.5+29c95f3
+master-1   Ready    control-plane,master,worker   140m   v1.29.5+29c95f3
+master-2   Ready    control-plane,master,worker   141m   v1.29.5+29c95f3
+worker-0   Ready    worker                        96m    v1.29.5+29c95f3
+worker-1   Ready    worker                        96m    v1.29.5+29c95f3
+worker-2   Ready    worker                        96m    v1.29.5+29c95f3
+worker-3   Ready    worker                        96m    v1.29.5+29c95f3
 ```
 
-Ensure the LVMS storage class is available.
+We can now use `install_yamls` on controller-0 as the zuul user to
+test the environment.
+
+#### Storage Class
+
+Do not run `make crc_storage`. Instead ensure the LVMS storage class
+is available.
 ```
 $ oc get sc
 NAME                           PROVISIONER   RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
@@ -475,21 +493,46 @@ $
 The
 [ci_lvms_storage](https://github.com/openstack-k8s-operators/ci-framework/tree/main/roles/ci_lvms_storage)
 Ansible role can help with this.
-
-Do not run `make crc_storage`.
+```
+pushd ~/src/github.com/openstack-k8s-operators/ci-framework/
+URL=https://raw.githubusercontent.com/fultonj/antelope/refs/heads/main/lvms/ansible/lvms.yml
+curl $URL -o lvms.yml
+ansible-playbook lvms.yml
+popd
+```
+The k8s manifests for LVMS should be in ~/ci-framework-data/artifacts/manifests/lvms
 
 When deploying the control plane use the following:
 ```
 STORAGE_CLASS=lvms-local-storage NETWORK_ISOLATION=false make openstack_deploy
 ```
 
+#### Create Zones
+
+I will create three zones (`A`, `B`, `C`) with my nodes:
+```
+A: cifmw-ocp-master-0
+   cifmw-ocp-worker-0
+   cifmw-ocp-worker-3
+
+B: cifmw-ocp-master-1
+   cifmw-ocp-worker-1
+
+C: cifmw-ocp-master-2
+   cifmw-ocp-worker-2
+```
+
 Label the nodes as seen in the [Node labels example](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/#node-labels)
 
 ```
 oc label nodes master-0 node=node1 zone=zoneA --overwrite
-oc label nodes master-1 node=node2 zone=zoneA --overwrite
-oc label nodes master-2 node=node3 zone=zoneB --overwrite
-oc label nodes worker-0 node=node4 zone=zoneB --overwrite
-```
+oc label nodes worker-0 node=node2 zone=zoneA --overwrite
+oc label nodes worker-3 node=node3 zone=zoneA --overwrite
 
+oc label nodes master-1 node=node4 zone=zoneB --overwrite
+oc label nodes worker-1 node=node5 zone=zoneB --overwrite
+
+oc label nodes master-2 node=node6 zone=zoneC --overwrite
+oc label nodes worker-2 node=node7 zone=zoneC --overwrite
+```
 Use `oc get nodes --show-labels` to confirm the lables were applied.
