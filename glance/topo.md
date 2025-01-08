@@ -7,7 +7,7 @@ and
 to schedule the Glance pods on specific nodes.
 
 - [infra-operator](https://github.com/openstack-k8s-operators/infra-operator/pull/325)
-- [lib-common](https://github.com/openstack-k8s-operators/lib-common/pull/582)
+- [lib-common](https://github.com/openstack-k8s-operators/lib-common/pull/587)
 - [glance-operator](https://github.com/openstack-k8s-operators/glance-operator/pull/670)
 - [opentsack-operator](https://github.com/fmount/openstack-operator/tree/topology-0)
 
@@ -258,6 +258,16 @@ STORAGE_CLASS=lvms-local-storage NETWORK_ISOLATION=false make openstack_deploy
 
 ### Configure Topologies
 
+As described in the
+[glance-operator design decisions document](https://github.com/openstack-k8s-operators/glance-operator/blob/main/docs/design-decisions.md)
+there are both `split` and `edge` glance pods.
+
+We will use `nodeAffinity` to schedule `edge` pods
+and `TopologySpreadConstraints` to schedule `split` pods
+as desired when the k8s cluster is split into three zones.
+
+#### Affinity for Glance Edge Pods
+
 Create a `Topology` for each zone baed on affinity.
 
 - [glance-azone-node-affinity.yaml](glance-azone-node-affinity.yaml)
@@ -315,3 +325,201 @@ glance-default-internal-api-0   3/3     Running   0          16m     192.168.44.
 - A zone pods are on master-0 or worker-0 which are in zone A
 - B zone pods are on master-1 or worker-1 which are in zone B
 - C zone pods are on master-2 or worker-2 which are in zone C
+
+#### topologySpreadConstraints for Glance Split Pods
+
+Use `oc edit oscp` to scale the default split pods from 1 to 3
+replicas.
+
+```yaml
+      glanceAPIs:
+        azone:
+          <...>
+        bzone:
+          <...>
+        czone:
+          <...>
+        default:
+          <...>
+          replicas: 3
+```
+Observe their distribution is mostly in zone A with the exeption of
+`glance-default-internal-api-0` which is running in zone B on
+`worker-1`. The scheduler is not aware of these zones when scheduling
+these pods.
+
+```
+$ oc get pods -l service=glance -o wide | grep default
+glance-default-external-api-0   3/3     Running   0          40m     192.168.52.39    worker-0   <none>           <none>
+glance-default-external-api-1   3/3     Running   0          2m40s   192.168.56.32    worker-2   <none>           <none>
+glance-default-external-api-2   3/3     Running   0          2m40s   192.168.48.41    worker-3   <none>           <none>
+glance-default-internal-api-0   3/3     Running   0          40m     192.168.44.49    worker-1   <none>           <none>
+glance-default-internal-api-1   3/3     Running   0          2m40s   192.168.48.42    worker-3   <none>           <none>
+glance-default-internal-api-2   3/3     Running   0          2m40s   192.168.52.41    worker-0   <none>           <none>
+```
+
+There is a built in `podAntiAffinity` in the OpenStack operator
+which pre-dates the pathces to add `topologyRef`. It distributes
+pods so that they land on a node with a different hostname. This
+makes sense as a general rule so that OpenStack pods are distributed
+to different nodes within the k8s cluster. The following `affinity` is
+added automatically to pods by default.
+
+```yaml
+$ oc get pod glance-default-internal-api-0 -o yaml | grep affinity -A 11
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: service
+              operator: In
+              values:
+              - glance
+          topologyKey: kubernetes.io/hostname
+        weight: 100
+```
+
+However, because the scheduling for the default split glance pod is
+not aware of the A,B,C zones we will give it a `topologyRef` to a
+new [glance-default-spread-pods.yaml](glance-default-spread-pods.yaml)
+`Topology` which spreads the pods across the zones.
+```
+oc create -f glance-default-spread-pods.yaml
+```
+Use `oc edit oscp` to add the `topologyRef`.
+```yaml
+      glanceAPIs:
+        azone:
+          <...>
+        bzone:
+          <...>
+        czone:
+          <...>
+        default:
+          <...>
+          replicas: 3
+          topologyRef:
+            name: glance-default-spread-pods
+```
+Observe the result:
+```
+$ oc get pods -l service=glance -o wide | grep default
+glance-default-external-api-0   3/3     Running   0          66m     192.168.52.39    worker-0   <none>           <none>
+glance-default-external-api-1   3/3     Running   0          28m     192.168.56.32    worker-2   <none>           <none>
+glance-default-external-api-2   0/3     Pending   0          2m33s   <none>           <none>     <none>           <none>
+glance-default-internal-api-0   3/3     Running   0          66m     192.168.44.49    worker-1   <none>           <none>
+glance-default-internal-api-1   0/3     Pending   0          2m20s   <none>           <none>     <none>           <none>
+glance-default-internal-api-2   3/3     Running   0          2m33s   192.168.52.43    worker-0   <none>           <none>
+$
+```
+- Pod `external-api-2` was moved from `worker-3` in zone A to Pending
+- Pod `internal-api-1` was moved from `worker-3` in zone A to Pending
+
+Both `internal-api-1` and `external-api-2` had the following so I'll
+just show one.
+
+```yaml
+$ oc get pod glance-default-external-api-2 -o yaml
+<...>
+spec:
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: service
+              operator: In
+              values:
+              - glance
+          topologyKey: kubernetes.io/hostname
+        weight: 100
+  <...>
+  topologySpreadConstraints:
+  - labelSelector:
+      matchLabels:
+        service: glance
+    maxSkew: 1
+    topologyKey: zone
+    whenUnsatisfiable: DoNotSchedule
+<...>
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: "2025-01-08T16:52:54Z"
+    message: '0/7 nodes are available: 1 node(s) didn''t match pod topology spread
+      constraints (missing required label), 6 node(s) had volume node affinity conflict.
+      preemption: 0/7 nodes are available: 7 Preemption is not helpful for scheduling.'
+    reason: Unschedulable
+    status: "False"
+    type: PodScheduled
+  phase: Pending
+  qosClass: BestEffort
+```
+
+The `6 node(s) had volume node affinity conflict` is because
+both `internal-api-1` and `external-api-2` were on `worker-3`
+and had a PV:
+```
+$ oc get pv | grep internal-api-1 | awk {'print $1'}
+pvc-e49079ee-4871-4b27-a207-10fb972e52c6
+$ oc get pv | grep external-api-2 | awk {'print $1'}
+pvc-7da33e01-8866-4e40-b95a-eef99a5b0ebd
+$
+```
+which is also on the same worker:
+```
+$ oc get pv pvc-e49079ee-4871-4b27-a207-10fb972e52c6 -o yaml | grep worker
+          - worker-3
+$ oc get pv pvc-7da33e01-8866-4e40-b95a-eef99a5b0ebd -o yaml | grep worker
+          - worker-3
+$
+```
+and that PV is implemented with LVMS so it cannot be migrated. Because
+we are applying this as a new scheduling constraint to an existing pod
+we are effectivley requesting to migrate the PV. We can avoid this by
+having this scheduling constraint in place before the pod is created
+the first time.
+
+As per the
+[glance-operator FAQ](https://github.com/openstack-k8s-operators/glance-operator/blob/main/docs/faq.md)
+the PV is used as a staging area and we can remove the additional
+constraint it has by setting `storage/external: true` and then the
+desired scheduling will not be blocked.
+
+Use `oc edit oscp` accordingly.
+```yaml
+      glanceAPIs:
+        azone:
+          <...>
+        bzone:
+          <...>
+        czone:
+          <...>
+        default:
+          <...>
+          replicas: 3
+          topologyRef:
+            name: glance-default-spread-pods
+          storage:
+            external: true
+```
+For demo puposes external share will not be configured.
+
+Now all of the default glance pods are running with the desired zone
+distribution.
+```
+$ oc get pods -l service=glance -o wide | grep default
+glance-default-external-api-0   0/3     Running   0          7s     192.168.44.53    worker-1   <none>           <none>
+glance-default-external-api-1   0/3     Running   0          7s     192.168.56.34    worker-2   <none>           <none>
+glance-default-external-api-2   0/3     Running   0          7s     192.168.52.44    worker-0   <none>           <none>
+glance-default-internal-api-0   0/3     Running   0          6s     192.168.52.45    worker-0   <none>           <none>
+glance-default-internal-api-1   0/3     Running   0          6s     192.168.40.239   master-2   <none>           <none>
+glance-default-internal-api-2   0/3     Running   0          6s     192.168.44.54    worker-1   <none>           <none>
+$
+```
+- Zone A: external-api-2, internal-api-0
+- Zone B: external-api-0, internal-api-2
+- Zone C: external-api-1, internal-api-1

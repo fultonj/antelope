@@ -1,0 +1,13 @@
+apiVersion: topology.openstack.org/v1beta1
+kind: Topology
+metadata:
+  name: glance-default-spread-pods
+  namespace: openstack
+spec:
+  topologySpreadConstraint:
+  - maxSkew: 1
+    topologyKey: zone
+    whenUnsatisfiable: DoNotSchedule
+    labelSelector:
+      matchLabels:
+        service: glance
