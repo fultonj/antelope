@@ -1,0 +1,13 @@
+apiVersion: topology.openstack.org/v1beta1
+kind: Topology
+metadata:
+  name: foo-zone-topo
+  namespace: openstack
+spec:
+  topologySpreadConstraint:
+  - labelSelector:
+      matchLabels:
+        api-name: foo
+    maxSkew: 2
+    topologyKey: zoneB
+    whenUnsatisfiable: DoNotSchedule

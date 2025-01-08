@@ -571,3 +571,196 @@ Deploy the control plane
 ```
 STORAGE_CLASS=lvms-local-storage NETWORK_ISOLATION=false make openstack_deploy
 ```
+
+#### Update Topologies
+
+Use [storage-topology.yaml](storage-topology.yaml) to create a topology.
+
+```
+oc create -f storage-topology.yaml
+```
+
+Patch glance to point to the new topology.
+
+```
+oc patch openstackcontrolplane $(oc get oscp -o custom-columns=NAME:.metadata.name --no-headers) --type=merge -p='{"spec": {"glance": {"template": {"glanceAPIs": {"default": {"topologyRef": {"name":"storage-topology", "namespace":"openstack"}}}}}}}' -n openstack
+```
+
+```
+$ oc get glanceapi  glance-default-external -o yaml | yq ".spec.topologyRef"
+name: storage-topology
+namespace: openstack
+$
+```
+
+Use [foo-topo.yaml](foo-topo.yaml) to create a topology which
+schedules pods in zoneB if their api-name matches foo.
+
+```
+oc create -f foo-topo.yaml
+```
+
+Use `oc edit oscp` and search for `glance:`
+Under `glanceAPIs` add two news entries like this:
+
+```yaml
+      glanceAPIs:
+        foo:
+          replicas: 1
+          topologyRef:
+            name: foo-zone-topo
+          type: edge
+        bar:
+          replicas: 1
+          type: edge
+          topologyRef:
+            name: storage-topology
+        default:
+          replicas: 1
+          type: split
+      secret: osp-secret
+      serviceUser: glance
+      storage:
+        storageRequest: 10G
+      topologyRef:
+        name: storage-topology
+    uniquePodNames: false
+```
+
+The above adds two new edge glance pods called foo and bar.
+All glance pods use the `topologyRef` called
+`storage-topology` except the foo pod which uses the `topologyRef`
+called `foo-zone-topo`.
+
+Observe the new edge pods:
+
+```
+$ oc get pods | egrep "(foo|bar)-"
+glance-bar-edge-api-0       0/3     Pending     0          2s
+glance-foo-edge-api-0       0/3     Pending     0          12h
+$
+```
+
+The foo pod (with some trimming) looks like this.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    apps.kubernetes.io/pod-index: "0"
+    component: glance-api
+    controller-revision-hash: glance-foo-edge-api-766c579dbb
+    glanceAPI: glance-foo-edge
+    owner: glance-foo-edge
+    service: glance
+    statefulset.kubernetes.io/pod-name: glance-foo-edge-api-0
+  name: glance-foo-edge-api-0
+  namespace: openstack
+  ownerReferences:
+  - apiVersion: apps/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: StatefulSet
+    name: glance-foo-edge-api
+spec:
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: service
+              operator: In
+              values:
+              - glance
+          topologyKey: kubernetes.io/hostname
+        weight: 100
+  topologySpreadConstraints:
+  - labelSelector:
+      matchLabels:
+        api-name: foo
+    maxSkew: 2
+    topologyKey: zoneB
+    whenUnsatisfiable: DoNotSchedule
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: "2025-01-08T01:09:17Z"
+    message: '0/7 nodes are available: 7 node(s) didn''t match pod topology spread
+      constraints (missing required label). preemption: 0/7 nodes are available: 7
+      Preemption is not helpful for scheduling.'
+    reason: Unschedulable
+    status: "False"
+    type: PodScheduled
+  phase: Pending
+  qosClass: BestEffort
+```
+
+This confirms foo received the foo-zone-topo and integrated it with
+the default (`weight: 100`) affinity.
+
+The bar pod (with trimming) looks like this:
+
+```yaml
+kind: Pod
+  labels:
+    apps.kubernetes.io/pod-index: "0"
+    component: glance-api
+    controller-revision-hash: glance-bar-edge-api-567f47b55f
+    glanceAPI: glance-bar-edge
+    owner: glance-bar-edge
+    service: glance
+    statefulset.kubernetes.io/pod-name: glance-bar-edge-api-0
+  name: glance-bar-edge-api-0
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: topology.kubernetes.io/zone
+            operator: In
+            values:
+            - zoneA
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: service
+              operator: In
+              values:
+              - glance
+          topologyKey: kubernetes.io/hostname
+        weight: 80
+  topologySpreadConstraints:
+  - labelSelector:
+      matchLabels:
+        service: glance
+    maxSkew: 3
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: ScheduleAnyway
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: "2025-01-08T13:11:43Z"
+    message: '0/7 nodes are available: 7 node(s) didn''t match Pod''s node affinity/selector.
+      preemption: 0/7 nodes are available: 7 Preemption is not helpful for scheduling.'
+    reason: Unschedulable
+    status: "False"
+    type: PodScheduled
+  phase: Pending
+  qosClass: BestEffort
+```
+
+This confirms bar received the storage-topology which also overrides
+the default (`weight: 100`) affinity since we see `weight: 80`. We
+also see it has `topologySpreadConstraints`.
+
+Note the following message in both:
+
+```
+0/7 nodes are available:
+7 node(s) didn't match pod topology spread constraints (missing required label).
+```
