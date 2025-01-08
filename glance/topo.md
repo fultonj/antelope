@@ -117,322 +117,6 @@ This shows that the Glance pod is obeying the
 [Topology Spread Constraints](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints)
 defined in [topo.yaml](topo.yaml).
 
-## Three Node Testing
-
-### Make Testing Environment
-
-#### Deploy 3 nodes
-
-Follow the ci-framework documentation as if you were going to
-[deploy a VA](https://ci-framework.pages.redhat.com/docs/main/ci-framework/deploy_va.html)
-but set `cifmw_deploy_architecture=false`.
-
-There should be no `openstack` or `openstack-operators` namespaces
-but you should now have a 3-node OCP deployment. The rest of these
-should be run as zuul@controller-0.
-
-#### Deploy OpenStack operator with custom image
-
-fmount built an
-[openstack-operator-index image](https://quay.io/repository/fpantano/openstack-operator-index?tab=tags&tag=v0.0.3)
-based on
-[opentsack-operator](https://github.com/fmount/openstack-operator/tree/topology-0).
-
-Use install_yamls to install it.
-```
-cd ~/src/github.com/openstack-k8s-operators/install_yamls/
-NETWORK_ISOLATION=false make openstack OPENSTACK_IMG=quay.io/fpantano/openstack-operator-index:v0.0.3
-```
-Watch the opentack operators start.
-```
-oc get pods -n openstack-operators -w
-```
-
-#### Deploy OpenStack control plane
-
-These commands should be run in
-`~/src/github.com/openstack-k8s-operators/install_yamls/`
-unless otherwise indicated
-
-Satisfy dependencies:
-```
-pushd devsetup
-make download_tools
-popd
-make crc_storage
-```
-
-Deploy the control plane
-```
-NETWORK_ISOLATION=false make openstack_deploy
-```
-
-Patch the control plane to add a default topology:
-```
-oc patch openstackcontrolplane $(oc get oscp -o custom-columns=NAME:.metadata.name --no-headers) --type=merge -p='{"spec": {"topology": {"maxSkew": 1, "topologyKey": "topology.kubernetes.io/zone", "whenUnsatisfiable": "DoNotSchedule"}}}' -n openstack
-```
-View the topology
-```
-oc get topology
-```
-
-Use [storage-topology.yaml](storage-topology.yaml) to create a storage
-topology.
-
-```
-oc create -f storage-topology.yaml
-```
-
-Patch glance to point to the new topology.
-
-```
-oc patch openstackcontrolplane $(oc get oscp -o custom-columns=NAME:.metadata.name --no-headers) --type=merge -p='{"spec": {"glance": {"template": {"glanceAPIs": {"default": {"topologyRef": {"name":"storage-topology", "namespace":"openstack"}}}}}}}' -n openstack
-```
-
-#### Observe Glance
-
-```
-$  oc get glanceapi  glance-default-external -o yaml | yq ".spec.topologyRef"
-name: storage-topology
-namespace: openstack
-$
-```
-
-```
-$ oc get sts glance-default-external-api -o yaml | yq ".spec.template.spec.topologySpreadConstraints"
-- labelSelector:
-    matchLabels:
-      service: glance
-  maxSkew: 3
-  topologyKey: topology.kubernetes.io/zone
-  whenUnsatisfiable: ScheduleAnyway
-$
-```
-
-```
-$ oc get sts glance-default-external-api -o yaml | yq ".spec.template.spec.affinity"
-nodeAffinity:
-  requiredDuringSchedulingIgnoredDuringExecution:
-    nodeSelectorTerms:
-      - matchExpressions:
-          - key: topology.kubernetes.io/zone
-            operator: In
-            values:
-              - zoneA
-podAntiAffinity:
-  preferredDuringSchedulingIgnoredDuringExecution:
-    - podAffinityTerm:
-        labelSelector:
-          matchExpressions:
-            - key: service
-              operator: In
-              values:
-                - glance
-        topologyKey: kubernetes.io/hostname
-      weight: 80
-$
-```
-
-### Create a topology for glance edge pods (3 node)
-
-Put two OCP nodes in Zone A and one node in Zone B.
-```
-ZoneA: node1, node2
-ZoneB: node3
-```
-Deploy one glance pod1 in Zone A and another glance pod2 in Zone B.
-
-Confirm that:
-
-- If node1 is not schedulable, glance pod1 is only scheduled on node2
-- If node3 is not schedulable, glance pod2 remains `Pending`
-
-Label the nodes as seen in the [Node labels example](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/#node-labels)
-
-```
-oc label nodes master-0 node=node1 zone=zoneA --overwrite
-oc label nodes master-1 node=node2 zone=zoneA --overwrite
-oc label nodes master-2 node=node3 zone=zoneB --overwrite
-```
-
-The steps in the previous section produce a glance pod which uses
-this `topologyRef`:
-
-```yaml
-          topologyRef:
-            name: storage-topology
-```
-Create two new topologies: [a-zone-topo.yaml](a-zone-topo.yaml) and
-[b-zone-topo.yaml](b-zone-topo.yaml).
-
-```yaml
-$ oc create -f a-zone-topo.yaml
-topology.topology.openstack.org/a-zone-topo created
-$ oc create -f b-zone-topo.yaml
-topology.topology.openstack.org/b-zone-topo created
-$
-```
-
-Use `oc edit openstackcontrolplane` and search for `glance:`
-Under `glanceAPIs` add two news entries under `default` to
-run a glance pod called `azone` in zone A and glance pod called
-`bzone` in zone B.
-
-```yaml
-      glanceAPIs:
-        azone:
-          topologyRef:
-            name: a-zone-topo
-          replicas: 1
-          type: edge
-        bzone:
-          topologyRef:
-            name: b-zone-topo
-          replicas: 1
-          type: edge
-```
-Observe the pods:
-```
-$ oc get pods | grep glance | grep zone
-glance-azone-edge-api-0     3/3     Running     0          4m20s
-glance-bzone-edge-api-0     3/3     Running     0          4m
-$
-```
-Observe where the pods are running.
-```
-$ oc get pod glance-azone-edge-api-0 -o yaml | grep nodeName
-  nodeName: master-2
-$ oc get pod glance-bzone-edge-api-0 -o yaml | grep nodeName
-  nodeName: master-0
-$
-```
-I'd expect the opposite given the labeling.
-
-#### Update Toplogies
-
-The pods could be scheduled in the desired way after a lot of changes.
-
-- The so-called "a-zone" pod has been scheduled to be in zone B.
-- The so-called "b-zone" pod has been scheduled to be in zone A.
-
-I should have updated this example to rename the pods since they've
-been scheduled backwards. Regardless, I was able to see the scheduler
-take action in the zones.
-
-We see the "a-zone" pod is pending and other pods are running.
-```shell
-$ oc get pods | grep glance | grep zone
-glance-azone-edge-api-0            0/3     Pending     0          46h
-glance-bzone-edge-api-0            3/3     Running     0          46h
-glance-default-external-api-0      3/3     Running     0          46h
-glance-default-internal-api-0      3/3     Running     0          46h
-$
-```
-The "b-zone" pod is running on a node in zone A.
-```shell
-$ oc get pod glance-bzone-edge-api-0 -o yaml | grep nodeName
-  nodeName: master-0
-$
-```
-The default pods are also running in zone A.
-```shell
-$ oc get pod glance-default-external-api-0 -o yaml | grep nodeName
-  nodeName: master-1
-$ oc get pod glance-default-internal-api-0 -o yaml | grep nodeName
-  nodeName: master-0
-$
-```
-The `oscp` CR glance section looks like this:
-```yaml
-        glanceAPIs:
-          azone:
-            replicas: 1
-            topologyRef:
-              name: b-zone-topo
-            type: edge
-          bzone:
-            replicas: 1
-            type: edge
-          default:
-            replicas: 1
-            type: split
-        secret: osp-secret
-        serviceUser: glance
-        storage:
-          storageRequest: 10G
-        topologyRef:
-          name: storage-topology
-      uniquePodNames: false
-```
-So all glance pods will inherit the `topologyRef` called
-`storage-topology` except the "azone" pod which has an override so
-that it uses the `topologyRef` called `b-zone-topo`.
-
-This [storage-topology.yaml](storage-topology.yaml) version
-results in glance pods being scheduled on nodes in zone A
-and ensures that those pods are spread scheduled, i.e. the
-second pod wont' be scheduled on the same node; this is desirable
-since if that node becomes unavailable and the other node is still
-running then the redundant pod can cover for the missing service.
-
-The [b-zone-topo-update.yaml](b-zone-topo-update.yaml) represents the
-current b-zone topology which differs like this from
-[b-zone-topo.yaml](b-zone-topo.yaml).
-
-```diff
-diff --git a/glance/b-zone-topo.yaml b/glance/b-zone-topo.yaml
-index e9c8f5d..46a6191 100644
---- a/glance/b-zone-topo.yaml
-+++ b/glance/b-zone-topo.yaml
-@@ -1,4 +1,3 @@
-----
- apiVersion: topology.openstack.org/v1beta1
- kind: Topology
- metadata:
-@@ -6,9 +5,9 @@ metadata:
-   namespace: openstack
- spec:
-   topologySpreadConstraint:
--  - maxSkew: 1
--    topologyKey: "zone"
--    whenUnsatisfiable: DoNotSchedule
--    labelSelector:
-+  - labelSelector:
-       matchLabels:
--        zone: zoneB
-+        api-name: azone
-+    maxSkew: 2
-+    topologyKey: zoneB
-+    whenUnsatisfiable: DoNotSchedule
-```
-
-The above `b-zone-topo` results in nodes being scheduled in zone B.
-Because my environment only has one node in zone B the pod is not
-scheduled. This is because the openstack-k8s-operators always inject
-the following `podAntiAffinity`.
-```yaml
-    podAntiAffinity:
-      preferredDuringSchedulingIgnoredDuringExecution:
-      - podAffinityTerm:
-          labelSelector:
-            matchExpressions:
-            - key: service
-              operator: In
-              values:
-              - glance
-          topologyKey: kubernetes.io/hostname
-        weight: 80
-```
-The above ensures that a node with a different hostname can host
-additional pods, i.e. it implements something similar to the
-topology spread in [b-zone-topo-update.yaml](b-zone-topo-update.yaml).
-
-Because there is only one node in zone-b, the pod which should run
-there (the unfortunately named glance-azone-edge-api-0), remains
-in `pending`. I expect that if zone-b had an additional node that
-it would be scheduled. I'll confirm this by redeploying my
-environment with more OCP nodes.
-
 ## Multi Node Testing
 
 ### Make Testing Environment
@@ -572,195 +256,62 @@ Deploy the control plane
 STORAGE_CLASS=lvms-local-storage NETWORK_ISOLATION=false make openstack_deploy
 ```
 
-#### Update Topologies
+### Configure Topologies
 
-Use [storage-topology.yaml](storage-topology.yaml) to create a topology.
+Create a `Topology` for each zone baed on affinity.
 
-```
-oc create -f storage-topology.yaml
-```
-
-Patch glance to point to the new topology.
+- [glance-azone-node-affinity.yaml](glance-azone-node-affinity.yaml)
+- [glance-bzone-node-affinity.yaml](glance-bzone-node-affinity.yaml)
+- [glance-czone-node-affinity.yaml](glance-czone-node-affinity.yaml)
 
 ```
-oc patch openstackcontrolplane $(oc get oscp -o custom-columns=NAME:.metadata.name --no-headers) --type=merge -p='{"spec": {"glance": {"template": {"glanceAPIs": {"default": {"topologyRef": {"name":"storage-topology", "namespace":"openstack"}}}}}}}' -n openstack
+for F in $(echo glance-{a,b,c}zone-node-affinity.yaml); do oc apply -f $F; done
 ```
 
-```
-$ oc get glanceapi  glance-default-external -o yaml | yq ".spec.topologyRef"
-name: storage-topology
-namespace: openstack
-$
-```
+Use `oc edit oscp` and search for `glance:`.
+Under `glanceAPIs` add new entries under `default` to:
 
-Use [foo-topo.yaml](foo-topo.yaml) to create a topology which
-schedules pods in zoneB if their api-name matches foo.
-
-```
-oc create -f foo-topo.yaml
-```
-
-Use `oc edit oscp` and search for `glance:`
-Under `glanceAPIs` add two news entries like this:
+- run glance pods with the name `azone` in zone A
+- run glance pods with the name `bzone` in zone B
+- run glance pods with the name `czone` in zone C
 
 ```yaml
       glanceAPIs:
-        foo:
-          replicas: 1
+        azone:
           topologyRef:
-            name: foo-zone-topo
+            name: glance-azone-node-affinity
+          replicas: 3
           type: edge
-        bar:
-          replicas: 1
-          type: edge
+        bzone:
           topologyRef:
-            name: storage-topology
-        default:
-          replicas: 1
-          type: split
-      secret: osp-secret
-      serviceUser: glance
-      storage:
-        storageRequest: 10G
-      topologyRef:
-        name: storage-topology
-    uniquePodNames: false
+            name: glance-bzone-node-affinity
+          replicas: 3
+          type: edge
+        czone:
+          topologyRef:
+            name: glance-czone-node-affinity
+          replicas: 3
+          type: edge
 ```
 
-The above adds two new edge glance pods called foo and bar.
-All glance pods use the `topologyRef` called
-`storage-topology` except the foo pod which uses the `topologyRef`
-called `foo-zone-topo`.
-
-Observe the new edge pods:
+Observe which pods end up on which nodes and confirm they match their zones.
 
 ```
-$ oc get pods | egrep "(foo|bar)-"
-glance-bar-edge-api-0       0/3     Pending     0          2s
-glance-foo-edge-api-0       0/3     Pending     0          12h
-$
+$ oc get pods -l service=glance -o wide
+NAME                            READY   STATUS    RESTARTS   AGE     IP               NODE       NOMINATED NODE   READINESS GATES
+glance-azone-edge-api-0         3/3     Running   0          2m13s   192.168.34.111   master-0   <none>           <none>
+glance-azone-edge-api-1         3/3     Running   0          35s     192.168.52.40    worker-0   <none>           <none>
+glance-azone-edge-api-2         3/3     Running   0          35s     192.168.34.112   master-0   <none>           <none>
+glance-bzone-edge-api-0         3/3     Running   0          114s    192.168.36.153   master-1   <none>           <none>
+glance-bzone-edge-api-1         3/3     Running   0          35s     192.168.36.154   master-1   <none>           <none>
+glance-bzone-edge-api-2         3/3     Running   0          35s     192.168.44.51    worker-1   <none>           <none>
+glance-czone-edge-api-0         3/3     Running   0          2m10s   192.168.40.209   master-2   <none>           <none>
+glance-czone-edge-api-1         0/3     Running   0          35s     192.168.56.31    worker-2   <none>           <none>
+glance-czone-edge-api-2         3/3     Running   0          35s     192.168.40.210   master-2   <none>           <none>
+glance-default-external-api-0   3/3     Running   0          16m     192.168.52.39    worker-0   <none>           <none>
+glance-default-internal-api-0   3/3     Running   0          16m     192.168.44.49    worker-1   <none>           <none>
 ```
 
-The foo pod (with some trimming) looks like this.
-
-```yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    apps.kubernetes.io/pod-index: "0"
-    component: glance-api
-    controller-revision-hash: glance-foo-edge-api-766c579dbb
-    glanceAPI: glance-foo-edge
-    owner: glance-foo-edge
-    service: glance
-    statefulset.kubernetes.io/pod-name: glance-foo-edge-api-0
-  name: glance-foo-edge-api-0
-  namespace: openstack
-  ownerReferences:
-  - apiVersion: apps/v1
-    blockOwnerDeletion: true
-    controller: true
-    kind: StatefulSet
-    name: glance-foo-edge-api
-spec:
-  affinity:
-    podAntiAffinity:
-      preferredDuringSchedulingIgnoredDuringExecution:
-      - podAffinityTerm:
-          labelSelector:
-            matchExpressions:
-            - key: service
-              operator: In
-              values:
-              - glance
-          topologyKey: kubernetes.io/hostname
-        weight: 100
-  topologySpreadConstraints:
-  - labelSelector:
-      matchLabels:
-        api-name: foo
-    maxSkew: 2
-    topologyKey: zoneB
-    whenUnsatisfiable: DoNotSchedule
-status:
-  conditions:
-  - lastProbeTime: null
-    lastTransitionTime: "2025-01-08T01:09:17Z"
-    message: '0/7 nodes are available: 7 node(s) didn''t match pod topology spread
-      constraints (missing required label). preemption: 0/7 nodes are available: 7
-      Preemption is not helpful for scheduling.'
-    reason: Unschedulable
-    status: "False"
-    type: PodScheduled
-  phase: Pending
-  qosClass: BestEffort
-```
-
-This confirms foo received the foo-zone-topo and integrated it with
-the default (`weight: 100`) affinity.
-
-The bar pod (with trimming) looks like this:
-
-```yaml
-kind: Pod
-  labels:
-    apps.kubernetes.io/pod-index: "0"
-    component: glance-api
-    controller-revision-hash: glance-bar-edge-api-567f47b55f
-    glanceAPI: glance-bar-edge
-    owner: glance-bar-edge
-    service: glance
-    statefulset.kubernetes.io/pod-name: glance-bar-edge-api-0
-  name: glance-bar-edge-api-0
-spec:
-  affinity:
-    nodeAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-        nodeSelectorTerms:
-        - matchExpressions:
-          - key: topology.kubernetes.io/zone
-            operator: In
-            values:
-            - zoneA
-    podAntiAffinity:
-      preferredDuringSchedulingIgnoredDuringExecution:
-      - podAffinityTerm:
-          labelSelector:
-            matchExpressions:
-            - key: service
-              operator: In
-              values:
-              - glance
-          topologyKey: kubernetes.io/hostname
-        weight: 80
-  topologySpreadConstraints:
-  - labelSelector:
-      matchLabels:
-        service: glance
-    maxSkew: 3
-    topologyKey: topology.kubernetes.io/zone
-    whenUnsatisfiable: ScheduleAnyway
-status:
-  conditions:
-  - lastProbeTime: null
-    lastTransitionTime: "2025-01-08T13:11:43Z"
-    message: '0/7 nodes are available: 7 node(s) didn''t match Pod''s node affinity/selector.
-      preemption: 0/7 nodes are available: 7 Preemption is not helpful for scheduling.'
-    reason: Unschedulable
-    status: "False"
-    type: PodScheduled
-  phase: Pending
-  qosClass: BestEffort
-```
-
-This confirms bar received the storage-topology which also overrides
-the default (`weight: 100`) affinity since we see `weight: 80`. We
-also see it has `topologySpreadConstraints`.
-
-Note the following message in both:
-
-```
-0/7 nodes are available:
-7 node(s) didn't match pod topology spread constraints (missing required label).
-```
+- A zone pods are on master-0 or worker-0 which are in zone A
+- B zone pods are on master-1 or worker-1 which are in zone B
+- C zone pods are on master-2 or worker-2 which are in zone C

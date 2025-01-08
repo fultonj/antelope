@@ -1,0 +1,15 @@
+apiVersion: topology.openstack.org/v1beta1
+kind: Topology
+metadata:
+  name: glance-azone-node-affinity
+  namespace: openstack
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: zone
+                operator: In
+                values:
+                  - zoneA
