@@ -502,7 +502,7 @@ popd
 ```
 The k8s manifests for LVMS should be in ~/ci-framework-data/artifacts/manifests/lvms
 
-When deploying the control plane use the following:
+When deploying the control plane (in a future step) use the following:
 ```
 STORAGE_CLASS=lvms-local-storage NETWORK_ISOLATION=false make openstack_deploy
 ```
@@ -536,3 +536,38 @@ oc label nodes master-2 node=node6 zone=zoneC --overwrite
 oc label nodes worker-2 node=node7 zone=zoneC --overwrite
 ```
 Use `oc get nodes --show-labels` to confirm the lables were applied.
+
+#### Deploy OpenStack operator with custom image
+
+fmount built an
+[openstack-operator-index image](https://quay.io/repository/fpantano/openstack-operator-index?tab=tags&tag=v0.0.3)
+based on
+[opentsack-operator](https://github.com/fmount/openstack-operator/tree/topology-0).
+
+Use `install_yamls` to install it.
+```
+cd ~/src/github.com/openstack-k8s-operators/install_yamls/
+STORAGE_CLASS=lvms-local-storage NETWORK_ISOLATION=false make openstack OPENSTACK_IMG=quay.io/fpantano/openstack-operator-index:v0.0.3
+```
+Watch the opentack operators start.
+```
+oc get pods -n openstack-operators -w
+```
+
+#### Deploy OpenStack control plane
+
+These commands should be run in
+`~/src/github.com/openstack-k8s-operators/install_yamls/`
+unless otherwise indicated
+
+Satisfy dependencies:
+```
+pushd devsetup
+make download_tools
+popd
+```
+
+Deploy the control plane
+```
+STORAGE_CLASS=lvms-local-storage NETWORK_ISOLATION=false make openstack_deploy
+```
