@@ -36,3 +36,37 @@ to
 [test/functional/glance_controller_test.go](https://github.com/openstack-k8s-operators/glance-operator/blob/2a8d70891ea9718aa41e8df7fa3088d0a033cfb8/test/functional/glance_controller_test.go#L243-L246)
 since the change involved creating an additional PVC the test is
 updated to assert that it exists (or fail if it doesn't).
+
+[PR587](https://github.com/openstack-k8s-operators/lib-common/pull/587)
+included two tests which were added to `affinity_test.go` to assert
+that the affinity overrides behave as expected. When the test is run
+with more verbosity:
+```
+make test GINKGO_ARGS="-v --output-interceptor-mode=none "
+```
+we still see only that all of the tests in the affinity module pass:
+```
+ok  	github.com/openstack-k8s-operators/lib-common/modules/common/affinity	0.010s	coverage: 46.3% of statements
+```
+However, if we invert the expected result:
+```diff
+- g.Expect(d).To(BeEquivalentTo(expectedAffinity))
++ g.Expect(d).NotTo(BeEquivalentTo(expectedAffinity))
+```
+and re-run, then we can see clearly that our test is being run.
+```
+--- FAIL: TestDistributePods (0.00s)
+    --- FAIL: TestDistributePods/Pod_distribution_with_overrides (0.00s)
+        affinity_test.go:101:
+            Expected
+                <*v1.Affinity | 0xc000013b30>: {
+                <...>
+                }
+            not to be equivalent to
+                <*v1.Affinity | 0xc000013260>: {
+                <...>
+                }
+FAIL
+coverage: 46.3% of statements
+```
+This is a useful technique to be sure your test is getting run.
