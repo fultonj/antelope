@@ -523,3 +523,207 @@ $
 - Zone A: external-api-2, internal-api-0
 - Zone B: external-api-0, internal-api-2
 - Zone C: external-api-1, internal-api-1
+
+### Failure Scenarios
+
+If there's a system failure, e.g. a worker node hosting a pod goes
+offline, then what should happen?
+
+Should the glance pods be moved to a worker in same zone (if
+StorageClass allows)?
+
+#### Remove Storage
+
+Since LVMS does not support storage migration the pod will not be
+migrated in the failure scenario. We will workaround this by not
+using a storage backend for the staging area.
+
+Use `oc edit oscp` to have all galnce pods use external storage.
+```yaml
+  glance:
+    template:
+      storage:
+        storageRequest: 11G
+        external: true
+      glanceAPIs:
+        azone:
+          <...>
+        bzone:
+          <...>
+        czone:
+          <...>
+        default:
+          <...>
+```
+Ensure `storage: {}` is removed from each pod under `glanceAPIs`
+so that all pods inherit the new storage setting. Confirm there
+are no more PVCs in use by the Glance pods.
+```
+for P in $(oc get pods | grep glance | grep -v purge | awk {'print $1'}); do
+  echo $P; oc get pod $P -o yaml | grep -i persistentVolumeClaim ;
+done
+```
+
+#### Simulate Failure
+
+Observe the pods running in Zone A
+```
+$ oc get pods -l service=glance -o wide | egrep "master-0|worker-0|worker-3"
+glance-azone-edge-api-0         3/3     Running   0          62m   192.168.52.47    worker-0   <none>           <none>
+glance-azone-edge-api-1         3/3     Running   0          62m   192.168.52.48    worker-0   <none>           <none>
+glance-azone-edge-api-2         3/3     Running   0          62m   192.168.32.104   master-0   <none>           <none>
+glance-default-external-api-0   3/3     Running   0          62m   192.168.52.46    worker-0   <none>           <none>
+glance-default-external-api-2   3/3     Running   0          62m   192.168.32.103   master-0   <none>           <none>
+$
+```
+Use `virsh suspend cifmw-ocp-worker-0` to take worker-0 offline.
+```
+[zuul@osp-storage-01 ~]$ sudo virsh list | grep paused
+ 79   cifmw-ocp-worker-0         paused
+[zuul@osp-storage-01 ~]$
+```
+Observe that worker-0 is no longer ready:
+```
+$ oc get nodes
+NAME       STATUS     ROLES                         AGE    VERSION
+master-0   Ready      control-plane,master,worker   3d3h   v1.29.5+29c95f3
+master-1   Ready      control-plane,master,worker   3d3h   v1.29.5+29c95f3
+master-2   Ready      control-plane,master,worker   3d3h   v1.29.5+29c95f3
+worker-0   NotReady   worker                        3d2h   v1.29.5+29c95f3
+worker-1   Ready      worker                        3d2h   v1.29.5+29c95f3
+worker-2   Ready      worker                        3d2h   v1.29.5+29c95f3
+worker-3   Ready      worker                        3d2h   v1.29.5+29c95f3
+$
+```
+Confirm that an A zone pod is offline:
+```
+$ oc rsh glance-azone-edge-api-0
+Defaulted container "glance-log" out of: glance-log, glance-httpd, glance-api
+Error from server: error dialing backend: dial tcp 192.168.111.20:10250: connect: no route to host
+$
+```
+while a B zone pod is online:
+```
+$ oc rsh glance-bzone-edge-api-0
+Defaulted container "glance-log" out of: glance-log, glance-httpd, glance-api
+sh-5.1$ exit
+$
+```
+Observe that the pods on worker-0 are terminating:
+```
+$ oc get pods -l service=glance -o wide | egrep "master-0|worker-0|worker-3"
+glance-azone-edge-api-0         3/3     Terminating   0          72m   192.168.52.47    worker-0   <none>           <none>
+glance-azone-edge-api-1         3/3     Terminating   0          72m   192.168.52.48    worker-0   <none>           <none>
+glance-azone-edge-api-2         3/3     Running       0          72m   192.168.32.104   master-0   <none>           <none>
+glance-default-external-api-0   3/3     Terminating   0          72m   192.168.52.46    worker-0   <none>           <none>
+glance-default-external-api-2   3/3     Running       0          72m   192.168.32.103   master-0   <none>           <none>
+$
+```
+I re-started the stateful set and stopped for the weekend.
+```
+$ oc rollout restart sts glance-azone-edge-api
+Warning: would violate PodSecurity "restricted:latest": allowPrivilegeEscalation != false (containers "glance-httpd", "glance-api" must set securityContext.allowPrivilegeEscalation=false), unrestricted capabilities (containers "glance-httpd", "glance-api" must set securityContext.capabilities.drop=["ALL"])
+statefulset.apps/glance-azone-edge-api restarted
+$
+```
+The edge pods are in the same state after 2 days:
+```
+$ oc get pods -l service=glance -o wide | egrep "master-0|worker-0|worker-3" | grep edge
+glance-azone-edge-api-0         3/3     Terminating   0          2d19h   192.168.52.47    worker-0   <none>           <none>
+glance-azone-edge-api-1         3/3     Terminating   0          2d19h   192.168.52.48    worker-0   <none>           <none>
+glance-azone-edge-api-2         3/3     Running       0          4m27s   192.168.34.84    master-0   <none>           <none>
+$
+```
+They are still in state `Terminating` if I remove the `topologyRef`.
+```diff
+      glanceAPIs:
+        azone:
+-         topologyRef:
+-           name: glance-azone-node-affinity
+          replicas: 3
+          type: edge
+```
+The pods had `tolerations` as described in
+[The Taint-Based Evictions feature](https://docs.redhat.com/en/documentation/red_hat_openstack_services_on_openshift/18.0/html/monitoring_high_availability_services/proc_testing-the-resilience-of-a-control-plane_ha-monitoring#con_the-taint-based-evictions-feature_ha-monitoring)
+```yaml
+  tolerations:
+  - effect: NoExecute
+    key: node.kubernetes.io/not-ready
+    operator: Exists
+    tolerationSeconds: 300
+  - effect: NoExecute
+    key: node.kubernetes.io/unreachable
+    operator: Exists
+    tolerationSeconds: 300
+```
+But 2 days is much longer than 300 seconds, or 5 minutes.
+
+*This is an eviction issue, not a scheduling issue. The pod is not going away so a new one cannot be scheduled.*
+
+The k8s scheduler log shows that the deletion of the pod was canceled:
+```
+for POD in
+  $(oc get pods -n openshift-kube-controller-manager | grep -i running | awk {'print $1'}); do
+    echo $POD; oc logs -n openshift-kube-controller-manager $POD | grep TaintManager;
+done
+```
+also seen in `oc get events -A`:
+```
+27m         Normal    TaintManagerEviction   pod/glance-azone-edge-api-1   Cancelling deletion of Pod openstack/glance-azone-edge-api-1
+22m         Normal    TaintManagerEviction   pod/glance-azone-edge-api-1   Marking for deletion Pod openstack/glance-azone-edge-api-1
+```
+
+#### Work Around Eviction Issue
+
+Two edge pods and the external part of a split pod are stuck in
+terminating and their deletion is getting canceled by
+`TaintManagerEviction`.
+```
+glance-azone-edge-api-0         3/3     Terminating   0          72m   192.168.52.47    worker-0   <none>           <none>
+glance-azone-edge-api-1         3/3     Terminating   0          72m   192.168.52.48    worker-0   <none>           <none>
+glance-default-external-api-0   3/3     Terminating   0          72m   192.168.52.46    worker-0   <none>           <none>
+```
+
+I was able to bring the azone pods back by force deleting them.
+```
+$ oc get pods -l service=glance -o wide  | grep glance-azone-edge-api-1
+glance-azone-edge-api-1         3/3     Terminating   0          3d22h   192.168.52.48    worker-0   <none>           <none>
+$ oc delete pod glance-azone-edge-api-1 --force --grace-period=0
+Warning: Immediate deletion does not wait for confirmation that the running resource has been terminated. The resource may continue to run on the cluster indefinitely.
+pod "glance-azone-edge-api-1" force deleted
+$ oc get pods -l service=glance -o wide  | grep glance-azone-edge-api-1
+glance-azone-edge-api-1         0/3     Running       0          3s      192.168.48.111   worker-3   <none>           <none>
+$
+```
+
+Why should I have to force delete?
+
+Conjecture:
+
+- One pod was still alive on another node, so the service was still
+  technically available. Maybe knowing this, k8s was therefore waiting
+  for the other failed node to come back up so that its kubelet could
+  confirm that the 2 terminating pods were fully deleted, and then,
+  after that, it could reschedule them elsewhere.
+
+- It then also follows that if the node hosting the remaining pod then
+  also failed while the other two pods were still down, then k8s might
+  have rescheduled one of the pods elsewhere immediately to satisfy
+  the minimum availability constraint of 1 pod being active.
+
+If it's waiting for the node to come back, so that it can be sure that
+the pod is gone, then if I restart the worker it should be able to
+confirm `glance-default-external-api-0` is gone and needs to be
+rescheduled and then schedule it on another node.
+
+```
+glance-default-external-api-0   3/3     Terminating   0          3d23h   192.168.52.46    worker-0   <none>           <none>
+```
+Bring worker back:
+```
+sudo virsh resume cifmw-ocp-worker-0
+```
+and it then has no problem rescheduling it.
+```
+glance-default-external-api-0   0/3     Running             0          25s     192.168.42.31    master-2   <none>           <none>
+```
