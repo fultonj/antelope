@@ -186,11 +186,6 @@ popd
 ```
 The k8s manifests for LVMS should be in ~/ci-framework-data/artifacts/manifests/lvms
 
-When deploying the control plane (in a future step) use the following:
-```
-STORAGE_CLASS=lvms-local-storage NETWORK_ISOLATION=false make openstack_deploy
-```
-
 #### Create Zones
 
 I will create three zones (`A`, `B`, `C`) with my nodes:
@@ -219,7 +214,9 @@ oc label nodes worker-1 node=node5 zone=zoneB --overwrite
 oc label nodes master-2 node=node6 zone=zoneC --overwrite
 oc label nodes worker-2 node=node7 zone=zoneC --overwrite
 ```
-Use `oc get nodes --show-labels` to confirm the lables were applied.
+
+Use `oc get nodes -o json | jq -r '.items[].metadata.labels.zone'`
+or `oc get nodes --show-labels` to confirm the lables were applied.
 
 #### Deploy OpenStack operator with custom image
 
@@ -757,3 +754,16 @@ of what the storage class allows).
 Instead, the service is degraded as there is one less pod, but the
 service keeps running in its zone as per the rules of a
 [StatefulSet](https://kubernetes.io/docs/tasks/run-application/force-delete-stateful-set-pod/#statefulset-considerations).
+
+### Clean Up
+
+```
+pushd ~/src/github.com/openstack-k8s-operators/install_yamls/
+
+make openstack_deploy_cleanup
+make openstack_cleanup
+
+oc get pvc -o NAME | xargs oc delete
+
+popd
+```
