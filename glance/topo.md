@@ -673,7 +673,7 @@ also seen in `oc get events -A`:
 22m         Normal    TaintManagerEviction   pod/glance-azone-edge-api-1   Marking for deletion Pod openstack/glance-azone-edge-api-1
 ```
 
-#### Work Around Eviction Issue
+#### React to Eviction Issue
 
 Two edge pods and the external part of a split pod are stuck in
 terminating and their deletion is getting canceled by
@@ -698,23 +698,21 @@ $
 
 Why should I have to force delete?
 
-Conjecture:
-
 - One pod was still alive on another node, so the service was still
-  technically available. Maybe knowing this, k8s was therefore waiting
-  for the other failed node to come back up so that its kubelet could
-  confirm that the 2 terminating pods were fully deleted, and then,
-  after that, it could reschedule them elsewhere.
+  technically available. k8s was therefore waiting for the other
+  failed node to come back up so that its kubelet could confirm that
+  the 2 terminating pods were fully deleted, and then, after that, it
+  could reschedule them elsewhere.
 
 - It then also follows that if the node hosting the remaining pod then
   also failed while the other two pods were still down, then k8s might
   have rescheduled one of the pods elsewhere immediately to satisfy
   the minimum availability constraint of 1 pod being active.
 
-If it's waiting for the node to come back, so that it can be sure that
-the pod is gone, then if I restart the worker it should be able to
-confirm `glance-default-external-api-0` is gone and needs to be
-rescheduled and then schedule it on another node.
+Thus, if it's waiting for the node to come back, so that it can be
+sure that the pod is gone, I should be able to restart the worker
+so k8s can confirm `glance-default-external-api-0` is gone and needs
+to be rescheduled and then it will schedule it on another node.
 
 ```
 glance-default-external-api-0   3/3     Terminating   0          3d23h   192.168.52.46    worker-0   <none>           <none>
@@ -727,3 +725,35 @@ and it then has no problem rescheduling it.
 ```
 glance-default-external-api-0   0/3     Running             0          25s     192.168.42.31    master-2   <none>           <none>
 ```
+This is the expected behavior as per the
+[StatefulSet Kubernetes Documentation](https://kubernetes.io/docs/tasks/run-application/force-delete-stateful-set-pod/#statefulset-considerations)
+
+> A Pod is not deleted automatically when a node is unreachable. The
+> Pods running on an unreachable Node enter the 'Terminating' or
+> 'Unknown' state after a timeout. Pods may also enter these states
+> when the user attempts graceful deletion of a Pod on an unreachable
+> Node. The only ways in which a Pod in such a state can be removed
+> from the apiserver are as follows:
+>
+> - The Node object is deleted (either by you, or by the Node Controller).
+> - The kubelet on the unresponsive Node starts responding, kills the Pod and removes the entry from the apiserver.
+> - Force deletion of the Pod by the user.
+> ...
+> It tries to ensure that the specified number of Pods from ordinal 0
+> through N-1 are alive and ready. StatefulSet ensures that, at any
+> time, there is at most one Pod with a given identity running in a
+> cluster. This is referred to as at most one semantics provided by a
+> StatefulSet.
+
+Going back to the original question:
+
+If there's a system failure, e.g. a worker node hosting a pod goes
+offline, then what should happen?
+
+We shouldn't expect the glance pod on the worker which went offline to
+be automatically migrated to antoher node in the same zone (regardless
+of what the storage class allows).
+
+Instead, the service is degraded as there is one less pod, but the
+service keeps running in its zone as per the rules of a
+[StatefulSet](https://kubernetes.io/docs/tasks/run-application/force-delete-stateful-set-pod/#statefulset-considerations).
