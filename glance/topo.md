@@ -7,7 +7,7 @@ and
 to schedule the Glance pods on specific nodes.
 
 - [infra-operator](https://github.com/openstack-k8s-operators/infra-operator/pull/325)
-- [lib-common](https://github.com/openstack-k8s-operators/lib-common/pull/587)
+- [lib-common](https://github.com/openstack-k8s-operators/lib-common/pull/592)
 - [glance-operator](https://github.com/openstack-k8s-operators/glance-operator/pull/670)
 - [opentsack-operator](https://github.com/fmount/openstack-operator/tree/topology-0)
 
@@ -37,7 +37,7 @@ oc get Topology/default-sample -o yaml
 #### lib-common
 
 ```
-git clone https://github.com/fmount/lib-common.git -b affinity-1
+git clone https://github.com/fmount/lib-common.git -b tpconditions
 ```
 
 #### glance
@@ -357,13 +357,11 @@ glance-default-internal-api-2   3/3     Running   0          2m40s   192.168.52.
 
 There is a built in `podAntiAffinity` in the OpenStack operator
 which pre-dates the pathces to add `topologyRef`. It distributes
-pods so that they land on a node with a different hostname. This
-makes sense as a general rule so that OpenStack pods are distributed
-to different nodes within the k8s cluster. The following `affinity` is
-added automatically to pods by default.
+pods so that they land on a node with a different hostname.
+
+https://github.com/openstack-k8s-operators/lib-common/blob/main/modules/common/affinity/affinity.go
 
 ```yaml
-$ oc get pod glance-default-internal-api-0 -o yaml | grep affinity -A 11
   affinity:
     podAntiAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
@@ -377,11 +375,17 @@ $ oc get pod glance-default-internal-api-0 -o yaml | grep affinity -A 11
           topologyKey: kubernetes.io/hostname
         weight: 100
 ```
+If a `topologyRef` is set, then it will override the default
+`affinity` above so that it is not used.
 
-However, because the scheduling for the default split glance pod is
-not aware of the A,B,C zones we will give it a `topologyRef` to a
-new [glance-default-spread-pods.yaml](glance-default-spread-pods.yaml)
-`Topology` which spreads the pods across the zones.
+Because the scheduling for the default split glance pod is not aware
+of the A,B,C zones we will give it a `topologyRef` to a new
+[glance-default-spread-pods.yaml](glance-default-spread-pods.yaml)
+`Topology` which spreads the pods across the zones. In this case
+we prefer to spread across zones, not just have a rule about being
+different hostnames as that does not ensure the pods will be in every
+zone.
+
 ```
 oc create -f glance-default-spread-pods.yaml
 ```
@@ -421,18 +425,6 @@ just show one.
 $ oc get pod glance-default-external-api-2 -o yaml
 <...>
 spec:
-  affinity:
-    podAntiAffinity:
-      preferredDuringSchedulingIgnoredDuringExecution:
-      - podAffinityTerm:
-          labelSelector:
-            matchExpressions:
-            - key: service
-              operator: In
-              values:
-              - glance
-          topologyKey: kubernetes.io/hostname
-        weight: 100
   <...>
   topologySpreadConstraints:
   - labelSelector:
